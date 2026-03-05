@@ -10,11 +10,6 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db.models import Q
 from io import BytesIO
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib import colors
 
 from .models import (
     Document, DocumentComment, Task, DocumentVersion,
@@ -421,6 +416,12 @@ def export_document_pdf(request, document_id):
     document = get_object_or_404(Document, pk=document_id)
     
     # Создаем PDF
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib import colors
+
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     story = []

@@ -6,3 +6,6 @@ weasyprint==63.1
 Pillow
 gunicorn
 whitenoise
+reportlab
+openpyxl
+python-docx
