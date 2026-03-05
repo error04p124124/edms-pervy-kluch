@@ -1930,10 +1930,10 @@ def report_export_pdf(request):
     if d['overdue_list']:
         story.append(Paragraph('Просроченные документы', h2_style))
         ov_rows = []
-        for doc in d['overdue_list']:
-            assignee = doc.assigned_to.get_full_name() if doc.assigned_to else '—'
-            deadline = doc.deadline.strftime('%d.%m.%Y') if doc.deadline else '—'
-            ov_rows.append([doc.registry_number or '—', doc.title[:50], deadline, assignee])
+        for odoc in d['overdue_list']:
+            assignee = odoc.assigned_to.get_full_name() if odoc.assigned_to else '—'
+            deadline = odoc.deadline.strftime('%d.%m.%Y') if odoc.deadline else '—'
+            ov_rows.append([odoc.registry_number or '—', odoc.title[:50], deadline, assignee])
         story.append(make_table(['Рег. №', 'Название', 'Срок', 'Ответственный'], ov_rows,
                                 [3*cm, 7*cm, 3*cm, 4*cm]))
 
