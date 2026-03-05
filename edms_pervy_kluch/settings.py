@@ -19,29 +19,33 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production'
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 # Получаем домен Railway из переменных окружения
-RAILWAY_DOMAIN = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'lilichka.up.railway.app')
+RAILWAY_DOMAIN = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '') or os.environ.get('RAILWAY_STATIC_URL', '')
 
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    RAILWAY_DOMAIN,
-    '*'  # Разрешаем все хосты (можно убрать в продакшене)
+    '*'
 ]
+if RAILWAY_DOMAIN:
+    ALLOWED_HOSTS.append(RAILWAY_DOMAIN)
 
-# CSRF настройки - конкретный домен + wildcard для railway
+# CSRF настройки
 CSRF_TRUSTED_ORIGINS = [
-    f'https://{RAILWAY_DOMAIN}',
     'https://*.railway.app',
     'https://*.up.railway.app',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
 ]
+if RAILWAY_DOMAIN:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RAILWAY_DOMAIN}')
 
-# Дополнительные CSRF настройки для Railway
-CSRF_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = 'None'
+# Cookie security — только в production (HTTPS)
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 
 # Application definition
