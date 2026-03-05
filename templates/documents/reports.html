@@ -176,6 +176,23 @@
     .rp-grid-2 { display: block; }
     .rp-card { break-inside: avoid; margin-bottom: 20px; border: 1px solid #ccc; }
     .kpi-grid { display: grid; }
+    .print-only { display: block !important; }
+    .print-narrative { page-break-before: always; }
+    .print-narrative-section { margin-bottom: 22px; page-break-inside: avoid; }
+    .print-narrative-section h3 {
+        font-size: 13pt; font-weight: 700; color: #1e1b4b;
+        margin: 0 0 6px; padding-bottom: 4px;
+        border-bottom: 1.5px solid #4338ca;
+    }
+    .print-narrative-section p {
+        font-size: 11pt; line-height: 1.6; color: #111827;
+        margin: 0; text-align: justify;
+    }
+    .print-narrative-title {
+        font-size: 16pt; font-weight: 700; color: #1e1b4b;
+        margin: 0 0 18px; padding-bottom: 8px;
+        border-bottom: 2px solid #4338ca;
+    }
 }
 </style>
 {% endblock %}
@@ -510,6 +527,21 @@
         </div>
     </div>
 
+</div>
+
+<!-- ── Print-only analytical text ── -->
+<div class="print-narrative" style="display:none; padding: 24px 32px; font-family: Georgia, 'Times New Roman', serif;">
+    <div class="print-narrative-title">Аналитический отчёт — текстовый раздел</div>
+    <p style="font-size:11pt; color:#4b5563; margin-bottom:24px;">
+        Период: <strong>{{ period_label }}</strong> &nbsp;&middot;&nbsp;
+        Сформирован: <strong>{{ today|date:"d.m.Y H:i" }}</strong>
+    </p>
+    {% for section in narrative_sections %}
+    <div class="print-narrative-section">
+        <h3>{{ forloop.counter }}. {{ section.title }}</h3>
+        <p>{{ section.body }}</p>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
 

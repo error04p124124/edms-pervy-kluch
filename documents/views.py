@@ -1529,6 +1529,33 @@ def reports(request):
         'type_labels': TYPE_LABELS,
     }
 
+    # ── Narrative text for print ──────────────────────────────
+    STATUS_LABELS_PRINT = dict(Document.STATUS_CHOICES)
+    _narrative_d = {
+        'period_label': period_label,
+        'today': timezone.now(),
+        'total_period': total_period,
+        'total_all': total_all,
+        'approved_period': approved_period,
+        'rejected_period': rejected_period,
+        'overdue_count': overdue_all.count(),
+        'in_work_period': in_work_period,
+        'in_review_period': in_review_period,
+        'avg_days': avg_days,
+        'by_status': list(by_status),
+        'STATUS_LABELS': STATUS_LABELS_PRINT,
+        'by_type': list(by_type),
+        'TYPE_LABELS': TYPE_LABELS,
+        'wf_total': wf_total,
+        'wf_approved': wf_approved,
+        'wf_rejected': wf_rejected,
+        'wf_pending': wf_pending,
+        'by_creator': list(by_creator),
+        'by_assignee': list(by_assignee),
+        'overdue_list': list(overdue_all.select_related('assigned_to', 'created_by').order_by('deadline')[:30]),
+    }
+    context['narrative_sections'] = _report_build_narrative(_narrative_d)
+
     return render(request, 'documents/reports.html', context)
 
 
@@ -1776,6 +1803,306 @@ def report_export_excel(request):
     return resp
 
 
+def _report_build_narrative(d):
+    """
+    Формирует структурированный аналитический текст по данным отчёта.
+    Возвращает список словарей: {'title': str, 'body': str}
+    """
+    sections = []
+    total_p  = d['total_period']
+    total_a  = d['total_all']
+
+    # ── 1. Вступление / резюме ────────────────────────────────────────────────
+    intro_body = (
+        f"Настоящий аналитический отчёт охватывает период «{d['period_label']}» и составлен "
+        f"{d['today'].strftime('%d.%m.%Y')} в {d['today'].strftime('%H:%M')}. "
+        f"В указанный период система электронного документооборота зафиксировала "
+        f"{total_p} {'документ' if total_p == 1 else 'документа' if 2 <= total_p <= 4 else 'документов'} "
+        f"(всего в системе накоплено {total_a} "
+        f"{'документ' if total_a == 1 else 'документа' if 2 <= total_a <= 4 else 'документов'}). "
+    )
+    if total_p == 0:
+        intro_body += (
+            "За анализируемый период документооборот отсутствовал, что может свидетельствовать "
+            "о нерабочем периоде, праздничных днях или временной остановке бизнес-процессов."
+        )
+    elif total_p < 5:
+        intro_body += (
+            "Документопоток за период отличается низкой интенсивностью. "
+            "Рекомендуется сопоставить показатели с аналогичным периодом прошлого года для оценки тенденции."
+        )
+    else:
+        intro_body += (
+            "Документопоток за период находится в активной фазе. "
+            "В ходе дальнейшего анализа рассматриваются ключевые показатели эффективности, "
+            "структура документооборота по статусам и типам, результаты процессов согласования, "
+            "а также нагрузка на участников процесса."
+        )
+    sections.append({'title': 'Введение', 'body': intro_body})
+
+    # ── 2. Анализ КПЭ ────────────────────────────────────────────────────────
+    if total_p > 0:
+        approval_pct = round(d['approved_period'] / total_p * 100, 1)
+        rejection_pct = round(d['rejected_period'] / total_p * 100, 1)
+        kpi_body = (
+            f"За отчётный период созданы и обработаны {total_p} документов. "
+            f"Из них утверждено {d['approved_period']} ({approval_pct}%), "
+            f"отклонено {d['rejected_period']} ({rejection_pct}%). "
+        )
+        if approval_pct >= 80:
+            kpi_body += (
+                "Высокий показатель утверждения свидетельствует о качественной подготовке документов "
+                "и слаженной работе сотрудников на всех этапах согласования. "
+            )
+        elif approval_pct >= 50:
+            kpi_body += (
+                "Уровень утверждения находится в удовлетворительном диапазоне. "
+                "Вместе с тем прослеживается потенциал для улучшения качества подготовки документов "
+                "с целью сокращения количества отклонений и повторных итераций. "
+            )
+        else:
+            kpi_body += (
+                "Уровень утверждения ниже рекомендуемого порогового значения (50%), "
+                "что может указывать на системные проблемы с качеством исходных документов, "
+                "недостаточную компетентность исполнителей или нечёткость регламентов согласования. "
+                "Рекомендуется провести детальный анализ причин отказов. "
+            )
+        if d['overdue_count'] > 0:
+            overdue_pct = round(d['overdue_count'] / max(d['in_work_period'], 1) * 100, 1)
+            kpi_body += (
+                f"Зафиксировано {d['overdue_count']} активных просроченных документов "
+                f"({overdue_pct}% от документов в работе). "
+            )
+            if d['overdue_count'] >= 10:
+                kpi_body += (
+                    "Значительное число просрочек требует немедленного управленческого внимания "
+                    "и мер по нормализации исполнительской дисциплины. "
+                )
+        if d['avg_days'] is not None:
+            kpi_body += (
+                f"Среднее время обработки (от создания до утверждения) составило {d['avg_days']} "
+                f"{'день' if d['avg_days'] == 1 else 'дня' if 2 <= d['avg_days'] <= 4 else 'дней'}. "
+            )
+            if d['avg_days'] <= 2:
+                kpi_body += "Это свидетельствует об эффективной и быстрой обработке документов. "
+            elif d['avg_days'] <= 7:
+                kpi_body += "Скорость обработки находится в стандартном диапазоне для большинства организаций. "
+            else:
+                kpi_body += (
+                    "Длительный цикл обработки может негативно сказываться на оперативности принятия решений. "
+                    "Рекомендуется пересмотреть этапы маршрутизации документов. "
+                )
+        sections.append({'title': 'Анализ ключевых показателей эффективности (КПЭ)', 'body': kpi_body})
+
+    # ── 3. Структурный анализ ─────────────────────────────────────────────────
+    if d['by_status']:
+        dominant = max(d['by_status'], key=lambda x: x['count'])
+        dominant_lbl = d['STATUS_LABELS'].get(dominant['status'], dominant['status'])
+        dominant_pct = round(dominant['count'] / (total_p or 1) * 100, 1)
+        struct_body = (
+            f"Анализ распределения документов по статусам показывает, что преобладающим является статус "
+            f"«{dominant_lbl}» — {dominant['count']} документов ({dominant_pct}%). "
+        )
+        status_map = {i['status']: i['count'] for i in d['by_status']}
+        draft_cnt = status_map.get('draft', 0)
+        if draft_cnt > 0 and total_p > 0:
+            draft_pct = round(draft_cnt / total_p * 100, 1)
+            if draft_pct > 30:
+                struct_body += (
+                    f"Обращает на себя внимание высокая доля документов в статусе «Черновик» ({draft_pct}%), "
+                    "что может указывать на незавершённые рабочие процессы или отсутствие стимулов "
+                    "для своевременной подачи документов на согласование. "
+                )
+        if d['by_type']:
+            top_type = d['by_type'][0]
+            top_type_lbl = d['TYPE_LABELS'].get(top_type['template__type'], top_type['template__type'] or 'Прочие')
+            struct_body += (
+                f"По типовому составу лидирует категория «{top_type_lbl}» "
+                f"({top_type['count']} ед., {round(top_type['count']/(total_p or 1)*100, 1)}%). "
+            )
+            if len(d['by_type']) > 1:
+                struct_body += (
+                    f"Всего в периоде зафиксировано {len(d['by_type'])} различных типов документов, "
+                    "что свидетельствует о многопрофильном характере документооборота организации. "
+                )
+        sections.append({'title': 'Структурный анализ документооборота', 'body': struct_body})
+
+    # ── 4. Процессы согласования ──────────────────────────────────────────────
+    if d['wf_total'] > 0:
+        wf_appr_pct = round(d['wf_approved'] / d['wf_total'] * 100, 1)
+        wf_rej_pct  = round(d['wf_rejected'] / d['wf_total'] * 100, 1)
+        wf_pend_pct = round(d['wf_pending']  / d['wf_total'] * 100, 1)
+        wf_body = (
+            f"В рамках маршрутов согласования за период принято {d['wf_total']} решений. "
+            f"Из них одобрено {d['wf_approved']} ({wf_appr_pct}%), "
+            f"отклонено {d['wf_rejected']} ({wf_rej_pct}%), "
+            f"ожидают решения {d['wf_pending']} ({wf_pend_pct}%). "
+        )
+        if wf_appr_pct >= 75:
+            wf_body += (
+                "Высокий процент одобрения в маршрутах согласования свидетельствует о зрелости "
+                "внутренних регламентов и высоком уровне взаимодействия между подразделениями. "
+            )
+        elif wf_appr_pct >= 50:
+            wf_body += (
+                "Процент одобрения в маршрутах согласования находится на среднем уровне. "
+                "Анализ причин отклонений поможет выявить слабые звенья в регламентах. "
+            )
+        else:
+            wf_body += (
+                "Низкий процент одобрения в маршрутах согласования является тревожным сигналом. "
+                "Возможные причины: несоответствие документов требованиям, нечёткие критерии одобрения, "
+                "или неверно настроенные маршруты. Рекомендуется провести аудит шаблонов согласования. "
+            )
+        if d['wf_pending'] > 0:
+            wf_body += (
+                f"Наличие {d['wf_pending']} ожидающих решений требует внимания ответственных лиц "
+                "во избежание накопления необработанных задач в очереди согласования. "
+            )
+        sections.append({'title': 'Анализ процессов согласования', 'body': wf_body})
+
+    # ── 5. Анализ активности пользователей ───────────────────────────────────
+    if d['by_creator'] or d['by_assignee']:
+        user_body = ""
+        if d['by_creator']:
+            top_cr = d['by_creator'][0]
+            fn = top_cr.get('created_by__first_name', '')
+            ln = top_cr.get('created_by__last_name', '')
+            un = top_cr.get('created_by__username', '')
+            top_creator_name = f'{fn} {ln}'.strip() or un
+            creator_pct = round(top_cr['count'] / (total_p or 1) * 100, 1)
+            user_body += (
+                f"В части активности по созданию документов лидирует сотрудник "
+                f"{top_creator_name} — {top_cr['count']} документов ({creator_pct}% от общего объёма). "
+            )
+            if len(d['by_creator']) > 1:
+                all_top_pct = round(sum(i['count'] for i in d['by_creator']) / (total_p or 1) * 100, 1)
+                user_body += (
+                    f"Топ-{len(d['by_creator'])} авторов в совокупности обеспечивают "
+                    f"{all_top_pct}% всего документопотока периода. "
+                )
+                if creator_pct > 60:
+                    user_body += (
+                        "Высокая концентрация документопотока у единственного автора "
+                        "может создавать риски «узкого места» в бизнес-процессах. "
+                    )
+        if d['by_assignee']:
+            top_as = d['by_assignee'][0]
+            fn = top_as.get('assigned_to__first_name', '')
+            ln = top_as.get('assigned_to__last_name', '')
+            un = top_as.get('assigned_to__username', '')
+            top_assignee_name = f'{fn} {ln}'.strip() or un
+            user_body += (
+                f"Наиболее нагруженным исполнителем является {top_assignee_name} "
+                f"({top_as['count']} документов назначено). "
+            )
+            if len(d['by_assignee']) >= 3:
+                loads = [i['count'] for i in d['by_assignee']]
+                if loads[0] > loads[-1] * 3:
+                    user_body += (
+                        "Распределение нагрузки среди исполнителей неравномерно: "
+                        "отдельные сотрудники перегружены по сравнению с другими. "
+                        "Рекомендуется балансировать назначения для более равномерного распределения задач. "
+                    )
+                else:
+                    user_body += "Распределение нагрузки среди исполнителей достаточно равномерное. "
+        sections.append({'title': 'Анализ активности участников процесса', 'body': user_body})
+
+    # ── 6. Блок рисков / просроченные ────────────────────────────────────────
+    overdue_cnt = d['overdue_count']
+    if overdue_cnt > 0:
+        risk_body = (
+            f"По состоянию на дату формирования отчёта в системе зафиксировано "
+            f"{overdue_cnt} {'просроченный документ' if overdue_cnt == 1 else 'просроченных документа' if 2 <= overdue_cnt <= 4 else 'просроченных документов'} "
+            f"с нарушением установленных сроков исполнения. "
+        )
+        if overdue_cnt >= 15:
+            risk_body += (
+                "Высокий уровень просрочки несёт существенные операционные и репутационные риски. "
+                "Рекомендованы: немедленное информирование ответственных исполнителей, "
+                "назначение дополнительных ресурсов на приоритетные документы, "
+                "а также системный пересмотр сроков и регламентов обработки. "
+            )
+        elif overdue_cnt >= 5:
+            risk_body += (
+                "Умеренный уровень просрочки требует оперативного вмешательства руководителей. "
+                "Необходимо выявить причины задержек (загруженность исполнителей, "
+                "нечёткость ТЗ, технические проблемы) и принять меры по устранению. "
+            )
+        else:
+            risk_body += (
+                "Незначительное число просрочек находится в пределах допустимого уровня. "
+                "Тем не менее рекомендуется лично уведомить ответственных исполнителей "
+                "и установить чёткие сроки завершения обработки. "
+            )
+        if d['overdue_list']:
+            oldest = None
+            for odoc in d['overdue_list']:
+                if odoc.deadline:
+                    if oldest is None or odoc.deadline < oldest.deadline:
+                        oldest = odoc
+            if oldest:
+                risk_body += (
+                    f"Наиболее длительная просрочка зафиксирована по документу "
+                    f"«{oldest.title[:50]}» (рег. № {oldest.registry_number or 'б/н'}, "
+                    f"срок — {oldest.deadline.strftime('%d.%m.%Y')}). "
+                )
+        sections.append({'title': 'Оценка рисков и просроченные документы', 'body': risk_body})
+    else:
+        sections.append({
+            'title': 'Оценка рисков и просроченные документы',
+            'body': (
+                "На дату формирования отчёта просроченных документов не выявлено. "
+                "Исполнительская дисциплина соответствует установленным стандартам, "
+                "все активные документы обрабатываются в установленные сроки. "
+                "Рекомендуется поддерживать текущий уровень дисциплины и проводить "
+                "регулярный мониторинг сроков исполнения для предотвращения просрочек."
+            )
+        })
+
+    # ── 7. Выводы и рекомендации ──────────────────────────────────────────────
+    concl_body = f"По итогам анализа данных за период «{d['period_label']}» можно сделать следующие выводы:\n"
+    points = []
+    if total_p > 0:
+        approval_pct = round(d['approved_period'] / total_p * 100, 1)
+        points.append(
+            f"уровень утверждения документов составил {approval_pct}% "
+            f"({'выше нормы' if approval_pct >= 70 else 'требует улучшения'})"
+        )
+    if d['overdue_count'] == 0:
+        points.append("просроченных документов не зафиксировано — исполнительская дисциплина в норме")
+    else:
+        points.append(f"выявлено {d['overdue_count']} просроченных документов, требующих немедленного внимания")
+    if d['avg_days'] is not None:
+        points.append(f"среднее время обработки документа — {d['avg_days']} дн.")
+    if d['wf_total'] > 0:
+        wf_appr_pct = round(d['wf_approved'] / d['wf_total'] * 100, 1)
+        points.append(f"в маршрутах согласования одобрено {wf_appr_pct}% решений")
+
+    concl_body = (
+        f"По итогам анализа данных за период «{d['period_label']}» сформированы следующие выводы: "
+        + "; ".join(points) + ". "
+    )
+    concl_recs = []
+    if d['overdue_count'] > 0:
+        concl_recs.append("усилить контроль исполнительской дисциплины по просроченным документам")
+    if total_p > 0 and d['approved_period'] / total_p < 0.5:
+        concl_recs.append("провести работу по повышению качества подготовки документов")
+    if d['avg_days'] is not None and d['avg_days'] > 7:
+        concl_recs.append("оптимизировать маршруты согласования для сокращения цикла обработки")
+    if d['wf_pending'] > 0:
+        concl_recs.append("обеспечить закрытие ожидающих согласований в кратчайшие сроки")
+    if concl_recs:
+        concl_body += "Рекомендации: " + "; ".join(concl_recs) + ". "
+    concl_body += (
+        "Представленные показатели и выводы рекомендуется использовать при принятии управленческих решений, "
+        "планировании ресурсов и аудите внутренних регламентов документооборота."
+    )
+    sections.append({'title': 'Заключение и рекомендации', 'body': concl_body})
+
+    return sections
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Report export: PDF
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1825,7 +2152,11 @@ def report_export_pdf(request):
     sub_style   = ParagraphStyle('RpSub',   fontName=font_name, fontSize=10, textColor=colors.HexColor('#6B7280'),
                                   spaceAfter=16)
     h2_style    = ParagraphStyle('RpH2',    fontName=font_name, fontSize=12, textColor=colors.HexColor('#1E1B4B'),
-                                  spaceBefore=14, spaceAfter=6, fontWeight='bold')
+                                  spaceBefore=14, spaceAfter=4, leading=16)
+    body_style  = ParagraphStyle('RpBody',  fontName=font_name, fontSize=10, textColor=colors.HexColor('#374151'),
+                                  spaceBefore=2, spaceAfter=10, leading=15)
+    label_style = ParagraphStyle('RpLabel', fontName=font_name, fontSize=9, textColor=colors.HexColor('#6B7280'),
+                                  spaceBefore=0, spaceAfter=4, leading=13)
 
     INDIGO  = colors.HexColor('#4338CA')
     INDIGO_L= colors.HexColor('#E0E7FF')
@@ -1853,14 +2184,30 @@ def report_export_pdf(request):
         ]))
         return t
 
+    def add_narrative(story, sections_list, section_title):
+        """Найти секцию по заголовку и добавить её текст в story."""
+        for sec in sections_list:
+            if sec['title'] == section_title:
+                story.append(Paragraph(sec['body'], body_style))
+                break
+
+    narrative = _report_build_narrative(d)
+
     story = []
     story.append(Paragraph('Аналитический отчёт', title_style))
-    story.append(Paragraph(f'Период: {d["period_label"]}   |   Сформирован: {d["today"].strftime("%d.%m.%Y %H:%M")}', sub_style))
+    story.append(Paragraph(
+        f'Период: {d["period_label"]}   |   Сформирован: {d["today"].strftime("%d.%m.%Y %H:%M")}',
+        sub_style))
     story.append(HRFlowable(width='100%', thickness=1, color=INDIGO_L))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
-    # KPI summary
-    story.append(Paragraph('Сводные показатели', h2_style))
+    # ── Введение ──────────────────────────────────────────────────────────────
+    story.append(Paragraph('1. Введение', h2_style))
+    add_narrative(story, narrative, 'Введение')
+
+    # ── КПЭ ──────────────────────────────────────────────────────────────────
+    story.append(Paragraph('2. Ключевые показатели эффективности', h2_style))
+    story.append(Paragraph('Таблица 1. Сводные показатели за период', label_style))
     kpi_rows = [
         ['Всего документов в системе',     str(d['total_all'])],
         ['Документов за период',           str(d['total_period'])],
@@ -1872,11 +2219,13 @@ def report_export_pdf(request):
         ['Ср. время обработки (дней)',     str(d['avg_days']) if d['avg_days'] is not None else '—'],
     ]
     story.append(make_table(['Показатель', 'Значение'], kpi_rows, [11*cm, 4*cm]))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 6))
+    add_narrative(story, narrative, 'Анализ ключевых показателей эффективности (КПЭ)')
 
-    # Workflow
+    # ── Согласование ─────────────────────────────────────────────────────────
     if d['wf_total']:
-        story.append(Paragraph('Согласование (WorkflowApproval)', h2_style))
+        story.append(Paragraph('3. Процессы согласования', h2_style))
+        story.append(Paragraph('Таблица 2. Результаты согласования (WorkflowApproval)', label_style))
         wf_rows = [
             ['Утверждено', str(d['wf_approved'])],
             ['Отклонено',  str(d['wf_rejected'])],
@@ -1884,27 +2233,34 @@ def report_export_pdf(request):
             ['Всего',      str(d['wf_total'])],
         ]
         story.append(make_table(['Результат', 'Количество'], wf_rows, [9*cm, 4*cm]))
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 6))
+        add_narrative(story, narrative, 'Анализ процессов согласования')
 
-    # By status
+    # ── Структура ─────────────────────────────────────────────────────────────
     total_p = d['total_period'] or 1
-    story.append(Paragraph('Разбивка по статусам', h2_style))
+    sec_num = 4 if d['wf_total'] else 3
+    story.append(Paragraph(f'{sec_num}. Структура документооборота', h2_style))
+    story.append(Paragraph(f'Таблица {sec_num}а. Разбивка по статусам', label_style))
     st_rows = [[d['STATUS_LABELS'].get(i['status'], i['status']), str(i['count']),
                 f"{round(i['count']/total_p*100,1)}%"] for i in d['by_status']]
     story.append(make_table(['Статус', 'Кол-во', 'Доля'], st_rows, [9*cm, 3*cm, 3*cm]))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 6))
 
-    # By type
     if d['by_type']:
-        story.append(Paragraph('Разбивка по типам документов', h2_style))
+        story.append(Paragraph(f'Таблица {sec_num}б. Разбивка по типам документов', label_style))
         tp_rows = [[d['TYPE_LABELS'].get(i['template__type'], i['template__type'] or '—'),
                     str(i['count']), f"{round(i['count']/total_p*100,1)}%"] for i in d['by_type']]
         story.append(make_table(['Тип', 'Кол-во', 'Доля'], tp_rows, [9*cm, 3*cm, 3*cm]))
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 6))
 
-    # Top creators
+    add_narrative(story, narrative, 'Структурный анализ документооборота')
+
+    # ── Активность пользователей ──────────────────────────────────────────────
+    sec_num2 = sec_num + 1
+    if d['by_creator'] or d['by_assignee']:
+        story.append(Paragraph(f'{sec_num2}. Активность участников процесса', h2_style))
     if d['by_creator']:
-        story.append(Paragraph('Топ авторов документов', h2_style))
+        story.append(Paragraph(f'Таблица {sec_num2}а. Топ авторов документов', label_style))
         cr_rows = []
         for idx, item in enumerate(d['by_creator'], 1):
             fn = item.get('created_by__first_name', '')
@@ -1913,11 +2269,10 @@ def report_export_pdf(request):
             name = f'{fn} {ln}'.strip() or un
             cr_rows.append([str(idx), name, str(item['count'])])
         story.append(make_table(['#', 'Сотрудник', 'Создано'], cr_rows, [1.5*cm, 9.5*cm, 4*cm]))
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 6))
 
-    # Top assignees
     if d['by_assignee']:
-        story.append(Paragraph('Топ исполнителей', h2_style))
+        story.append(Paragraph(f'Таблица {sec_num2}б. Топ исполнителей', label_style))
         as_rows = []
         for idx, item in enumerate(d['by_assignee'], 1):
             fn = item.get('assigned_to__first_name', '')
@@ -1926,11 +2281,17 @@ def report_export_pdf(request):
             name = f'{fn} {ln}'.strip() or un
             as_rows.append([str(idx), name, str(item['count'])])
         story.append(make_table(['#', 'Сотрудник', 'Назначено'], as_rows, [1.5*cm, 9.5*cm, 4*cm]))
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 6))
 
-    # Overdue
+    if d['by_creator'] or d['by_assignee']:
+        add_narrative(story, narrative, 'Анализ активности участников процесса')
+
+    # ── Просроченные / риски ──────────────────────────────────────────────────
+    sec_num3 = sec_num2 + 1
+    story.append(Paragraph(f'{sec_num3}. Оценка рисков и просроченные документы', h2_style))
+    add_narrative(story, narrative, 'Оценка рисков и просроченные документы')
     if d['overdue_list']:
-        story.append(Paragraph('Просроченные документы', h2_style))
+        story.append(Paragraph(f'Таблица {sec_num3}. Список просроченных документов', label_style))
         ov_rows = []
         for odoc in d['overdue_list']:
             assignee = odoc.assigned_to.get_full_name() if odoc.assigned_to else '—'
@@ -1938,6 +2299,14 @@ def report_export_pdf(request):
             ov_rows.append([odoc.registry_number or '—', odoc.title[:50], deadline, assignee])
         story.append(make_table(['Рег. №', 'Название', 'Срок', 'Ответственный'], ov_rows,
                                 [3*cm, 7*cm, 3*cm, 4*cm]))
+        story.append(Spacer(1, 6))
+
+    # ── Заключение ────────────────────────────────────────────────────────────
+    sec_num4 = sec_num3 + 1
+    story.append(HRFlowable(width='100%', thickness=0.5, color=INDIGO_L))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(f'{sec_num4}. Заключение и рекомендации', h2_style))
+    add_narrative(story, narrative, 'Заключение и рекомендации')
 
     doc.build(story)
     buf.seek(0)
@@ -1995,6 +2364,22 @@ def report_export_docx(request):
         run.font.size = Pt(12)
         run.font.color.rgb = INDIGO
 
+    def add_table_label(doc, text):
+        p = doc.add_paragraph(text)
+        p.paragraph_format.space_before = Pt(2)
+        p.paragraph_format.space_after  = Pt(2)
+        for run in p.runs:
+            run.italic = True
+            run.font.size = Pt(9)
+            run.font.color.rgb = GRAY
+
+    def add_body_text(doc, text):
+        p = doc.add_paragraph(text)
+        p.paragraph_format.space_before = Pt(4)
+        p.paragraph_format.space_after  = Pt(8)
+        for run in p.runs:
+            run.font.size = Pt(10)
+
     def add_kv_table(doc, headers, rows):
         tbl = doc.add_table(rows=1, cols=len(headers))
         tbl.style = 'Table Grid'
@@ -2012,6 +2397,14 @@ def report_export_docx(request):
                 row.cells[i].paragraphs[0].runs[0].font.size = Pt(9)
         return tbl
 
+    def add_narrative_section(doc, sections_list, section_title):
+        for sec in sections_list:
+            if sec['title'] == section_title:
+                add_body_text(doc, sec['body'])
+                break
+
+    narrative = _report_build_narrative(d)
+
     # ── Title block ──────────────────────────────────────────
     title_p = doc.add_heading('', level=0)
     title_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -2023,10 +2416,15 @@ def report_export_docx(request):
 
     sub2 = doc.add_paragraph(f'Сформирован: {d["today"].strftime("%d.%m.%Y %H:%M")}')
     sub2.runs[0].font.color.rgb = GRAY; sub2.runs[0].font.size = Pt(10)
-    sub2.paragraph_format.space_after = Pt(12)
+    sub2.paragraph_format.space_after = Pt(10)
 
-    # ── KPI summary ──────────────────────────────────────────
-    add_section_heading(doc, 'Сводные показатели')
+    # ── 1. Введение ─────────────────────────────────────────
+    add_section_heading(doc, '1. Введение')
+    add_narrative_section(doc, narrative, 'Введение')
+
+    # ── 2. Ключевые показатели ───────────────────────────────
+    add_section_heading(doc, '2. Ключевые показатели эффективности')
+    add_table_label(doc, 'Таблица 1. Сводные показатели за период')
     kpi_rows = [
         ('Всего документов в системе',    d['total_all']),
         ('Документов за период',          d['total_period']),
@@ -2038,34 +2436,47 @@ def report_export_docx(request):
         ('Ср. время обработки (дней)',    d['avg_days'] if d['avg_days'] is not None else '—'),
     ]
     add_kv_table(doc, ['Показатель', 'Значение'], kpi_rows)
+    doc.add_paragraph()
+    add_narrative_section(doc, narrative, 'Анализ ключевых показателей эффективности (КПЭ)')
 
-    # ── Workflow ─────────────────────────────────────────────
+    # ── 3. Согласование ─────────────────────────────────────
     if d['wf_total']:
-        add_section_heading(doc, 'Согласование (WorkflowApproval)')
+        add_section_heading(doc, '3. Процессы согласования')
+        add_table_label(doc, 'Таблица 2. Результаты согласования (WorkflowApproval)')
         add_kv_table(doc, ['Результат', 'Количество'], [
             ('Утверждено', d['wf_approved']),
             ('Отклонено',  d['wf_rejected']),
             ('Ожидает',    d['wf_pending']),
             ('Всего',      d['wf_total']),
         ])
+        doc.add_paragraph()
+        add_narrative_section(doc, narrative, 'Анализ процессов согласования')
 
-    # ── By status ────────────────────────────────────────────
+    # ── 4. Структура ──────────────────────────────────────────
     total_p = d['total_period'] or 1
-    add_section_heading(doc, 'Разбивка по статусам')
+    sec_num = 4 if d['wf_total'] else 3
+    add_section_heading(doc, f'{sec_num}. Структура документооборота')
+    add_table_label(doc, f'Таблица {sec_num}а. Разбивка по статусам')
     st_rows = [(d['STATUS_LABELS'].get(i['status'], i['status']), i['count'],
                 f"{round(i['count']/total_p*100,1)}%") for i in d['by_status']]
     add_kv_table(doc, ['Статус', 'Количество', 'Доля'], st_rows)
+    doc.add_paragraph()
 
-    # ── By type ──────────────────────────────────────────────
     if d['by_type']:
-        add_section_heading(doc, 'Разбивка по типам документов')
+        add_table_label(doc, f'Таблица {sec_num}б. Разбивка по типам документов')
         tp_rows = [(d['TYPE_LABELS'].get(i['template__type'], i['template__type'] or '—'),
                     i['count'], f"{round(i['count']/total_p*100,1)}%") for i in d['by_type']]
         add_kv_table(doc, ['Тип документа', 'Количество', 'Доля'], tp_rows)
+        doc.add_paragraph()
 
-    # ── Top creators ─────────────────────────────────────────
+    add_narrative_section(doc, narrative, 'Структурный анализ документооборота')
+
+    # ── 5. Активность пользователей ──────────────────────────
+    sec_num2 = sec_num + 1
+    if d['by_creator'] or d['by_assignee']:
+        add_section_heading(doc, f'{sec_num2}. Активность участников процесса')
     if d['by_creator']:
-        add_section_heading(doc, 'Топ авторов документов')
+        add_table_label(doc, f'Таблица {sec_num2}а. Топ авторов документов')
         cr_rows = []
         for idx, item in enumerate(d['by_creator'], 1):
             fn = item.get('created_by__first_name', '')
@@ -2073,10 +2484,10 @@ def report_export_docx(request):
             un = item.get('created_by__username', '')
             cr_rows.append((idx, f'{fn} {ln}'.strip() or un, item['count']))
         add_kv_table(doc, ['#', 'Сотрудник', 'Создано'], cr_rows)
+        doc.add_paragraph()
 
-    # ── Top assignees ────────────────────────────────────────
     if d['by_assignee']:
-        add_section_heading(doc, 'Топ исполнителей')
+        add_table_label(doc, f'Таблица {sec_num2}б. Топ исполнителей')
         as_rows = []
         for idx, item in enumerate(d['by_assignee'], 1):
             fn = item.get('assigned_to__first_name', '')
@@ -2084,10 +2495,17 @@ def report_export_docx(request):
             un = item.get('assigned_to__username', '')
             as_rows.append((idx, f'{fn} {ln}'.strip() or un, item['count']))
         add_kv_table(doc, ['#', 'Сотрудник', 'Назначено'], as_rows)
+        doc.add_paragraph()
 
-    # ── Overdue ──────────────────────────────────────────────
+    if d['by_creator'] or d['by_assignee']:
+        add_narrative_section(doc, narrative, 'Анализ активности участников процесса')
+
+    # ── 6. Риски / просроченные ──────────────────────────────
+    sec_num3 = sec_num2 + 1
+    add_section_heading(doc, f'{sec_num3}. Оценка рисков и просроченные документы')
+    add_narrative_section(doc, narrative, 'Оценка рисков и просроченные документы')
     if d['overdue_list']:
-        add_section_heading(doc, 'Просроченные документы')
+        add_table_label(doc, f'Таблица {sec_num3}. Список просроченных документов')
         ov_rows = []
         for doc_obj in d['overdue_list']:
             assignee = doc_obj.assigned_to.get_full_name() if doc_obj.assigned_to else '—'
@@ -2095,6 +2513,12 @@ def report_export_docx(request):
             status   = d['STATUS_LABELS'].get(doc_obj.status, doc_obj.status)
             ov_rows.append((doc_obj.registry_number or '—', doc_obj.title[:60], deadline, assignee, status))
         add_kv_table(doc, ['Рег. №', 'Название', 'Срок', 'Ответственный', 'Статус'], ov_rows)
+        doc.add_paragraph()
+
+    # ── 7. Заключение ────────────────────────────────────────
+    sec_num4 = sec_num3 + 1
+    add_section_heading(doc, f'{sec_num4}. Заключение и рекомендации')
+    add_narrative_section(doc, narrative, 'Заключение и рекомендации')
 
     buf = BytesIO()
     doc.save(buf)
