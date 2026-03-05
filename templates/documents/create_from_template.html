@@ -1,7 +1,7 @@
 ﻿{% extends 'base_modern.html' %}
 {% load static %}
 
-{% block title %}РЎРѕР·РґР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р° РёР· С€Р°Р±Р»РѕРЅР° - Р­Р”Рћ{% endblock %}
+{% block title %}Создание документа из шаблона - ЭДО{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -213,9 +213,9 @@
 <div class="container-fluid px-4 py-4">
     <div class="form-page-header">
         <h1 class="form-page-title">
-            <span>рџ“„</span> РЎРѕР·РґР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р° РёР· С€Р°Р±Р»РѕРЅР°
+            <span>📄</span> Создание документа из шаблона
         </h1>
-        <p class="form-page-subtitle">Р’С‹Р±РµСЂРёС‚Рµ С€Р°Р±Р»РѕРЅ, Р·Р°РїРѕР»РЅРёС‚Рµ РїРѕР»СЏ Рё РїРѕР»СѓС‡РёС‚Рµ РіРѕС‚РѕРІС‹Р№ С„Р°Р№Р»</p>
+        <p class="form-page-subtitle">Выберите шаблон, заполните поля и получите готовый файл</p>
     </div>
 
     <div class="form-card">
@@ -226,7 +226,7 @@
             <div class="alert-modern alert-info">
                 <i class="fas fa-exclamation-circle" style="font-size:1.25rem;"></i>
                 <div>
-                    <strong>РћР±РЅР°СЂСѓР¶РµРЅС‹ РѕС€РёР±РєРё РІ С„РѕСЂРјРµ.</strong>
+                    <strong>Обнаружены ошибки в форме.</strong>
                     <ul style="margin:0.5rem 0 0;padding-left:1.25rem;">
                         {% for field, errors in form.errors.items %}{% for error in errors %}<li>{{ error }}</li>{% endfor %}{% endfor %}
                     </ul>
@@ -234,40 +234,40 @@
             </div>
             {% endif %}
 
-            <!-- РЁР°Р±Р»РѕРЅ Рё РЅР°Р·РІР°РЅРёРµ -->
+            <!-- Шаблон и название -->
             <div class="form-section">
-                <h3 class="form-section-title">рџ“‹ РћСЃРЅРѕРІРЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ</h3>
+                <h3 class="form-section-title">📋 Основная информация</h3>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="id_template" class="form-label">
                             <i class="fas fa-layer-group" style="color:var(--primary-500,#6366f1);"></i>
-                            РЁР°Р±Р»РѕРЅ РґРѕРєСѓРјРµРЅС‚Р°<span class="required-star">*</span>
+                            Шаблон документа<span class="required-star">*</span>
                         </label>
                         {{ form.template }}
                         {% if form.template.errors %}
                         <span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ form.template.errors.0 }}</span>
                         {% endif %}
-                        <span class="form-help">РџРѕСЃР»Рµ РІС‹Р±РѕСЂР° С€Р°Р±Р»РѕРЅР° РїРѕСЏРІСЏС‚СЃСЏ РїРѕР»СЏ РґР»СЏ Р·Р°РїРѕР»РЅРµРЅРёСЏ</span>
+                        <span class="form-help">После выбора шаблона появятся поля для заполнения</span>
                     </div>
 
                     <div class="form-group">
                         <label for="id_title" class="form-label">
-                            РќР°Р·РІР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°<span class="required-star">*</span>
+                            Название документа<span class="required-star">*</span>
                         </label>
                         {{ form.title }}
                         {% if form.title.errors %}
                         <span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ form.title.errors.0 }}</span>
                         {% endif %}
-                        <span class="form-help">Р’РІРµРґРёС‚Рµ РїРѕРЅСЏС‚РЅРѕРµ РЅР°Р·РІР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°</span>
+                        <span class="form-help">Введите понятное название документа</span>
                     </div>
                 </div>
             </div>
 
-            <!-- РџРѕР»СЏ С€Р°Р±Р»РѕРЅР° -->
+            <!-- Поля шаблона -->
             {% if form.fields|length > 4 %}
             <div class="form-section">
-                <h3 class="form-section-title">вњЏпёЏ РџРѕР»СЏ С€Р°Р±Р»РѕРЅР°</h3>
+                <h3 class="form-section-title">✏️ Поля шаблона</h3>
                 <div class="placeholders-grid">
                     {% for field in form %}
                     {% if 'placeholder_' in field.name %}
@@ -285,25 +285,25 @@
             </div>
             {% endif %}
 
-            <!-- РџР°СЂР°РјРµС‚СЂС‹ -->
+            <!-- Параметры -->
             <div class="form-section">
-                <h3 class="form-section-title">рџ“… Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ</h3>
+                <h3 class="form-section-title">📅 Дополнительно</h3>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="id_assigned_to" class="form-label">РћС‚РІРµС‚СЃС‚РІРµРЅРЅС‹Р№</label>
+                        <label for="id_assigned_to" class="form-label">Ответственный</label>
                         {{ form.assigned_to }}
                         {% if form.assigned_to.errors %}
                         <span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ form.assigned_to.errors.0 }}</span>
                         {% endif %}
-                        <span class="form-help">РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ, РѕС‚РІРµС‚СЃС‚РІРµРЅРЅС‹Р№ Р·Р° РґРѕРєСѓРјРµРЅС‚</span>
+                        <span class="form-help">Пользователь, ответственный за документ</span>
                     </div>
                     <div class="form-group">
-                        <label for="id_deadline" class="form-label">РЎСЂРѕРє РёСЃРїРѕР»РЅРµРЅРёСЏ</label>
+                        <label for="id_deadline" class="form-label">Срок исполнения</label>
                         {{ form.deadline }}
                         {% if form.deadline.errors %}
                         <span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ form.deadline.errors.0 }}</span>
                         {% endif %}
-                        <span class="form-help">Р”Р°С‚Р°, РґРѕ РєРѕС‚РѕСЂРѕР№ РґРѕРєСѓРјРµРЅС‚ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РѕР±СЂР°Р±РѕС‚Р°РЅ</span>
+                        <span class="form-help">Дата, до которой документ должен быть обработан</span>
                     </div>
                 </div>
             </div>
@@ -311,11 +311,11 @@
             <div class="form-actions">
                 <button type="submit" class="btn-primary">
                     <i class="fas fa-bolt"></i>
-                    РЎРѕР·РґР°С‚СЊ Рё СЃРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ РґРѕРєСѓРјРµРЅС‚
+                    Создать и сгенерировать документ
                 </button>
                 <a href="{% url 'documents:template_list' %}" class="btn-secondary">
                     <i class="fas fa-times"></i>
-                    РћС‚РјРµРЅР°
+                    Отмена
                 </a>
             </div>
         </form>
