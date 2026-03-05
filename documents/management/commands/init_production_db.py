@@ -4,39 +4,79 @@ from django.contrib.auth.models import User
 from accounts.models import UserProfile
 
 
+PRODUCTION_USERS = [
+    {
+        'username': 'admin',
+        'password': 'admin',
+        'first_name': 'Администратор',
+        'last_name': 'Системы',
+        'email': 'admin@example.com',
+        'is_superuser': True,
+        'is_staff': True,
+        'role': 'admin',
+        'position': 'Системный администратор',
+        'department': 'IT отдел',
+    },
+    {
+        'username': 'александров.алексей45',
+        'password': 'Hfqcel779',
+        'first_name': 'Алексей',
+        'last_name': 'Александров',
+        'email': 'alexey45@example.com',
+        'is_superuser': False,
+        'is_staff': False,
+        'role': 'clerk',
+        'position': 'Делопроизводитель',
+        'department': 'Канцелярия',
+    },
+    {
+        'username': 'александров.виктор47',
+        'password': 'Hfqcel779',
+        'first_name': 'Виктор',
+        'last_name': 'Александров',
+        'email': 'viktor47@example.com',
+        'is_superuser': False,
+        'is_staff': False,
+        'role': 'manager',
+        'position': 'Руководитель',
+        'department': 'Управление',
+    },
+    {
+        'username': 'александров.игорь10',
+        'password': 'Hfqcel779',
+        'first_name': 'Игорь',
+        'last_name': 'Александров',
+        'email': 'igor10@example.com',
+        'is_superuser': False,
+        'is_staff': False,
+        'role': 'employee',
+        'position': 'Сотрудник',
+        'department': 'Отдел исполнения',
+    },
+]
+
+
 class Command(BaseCommand):
-    help = 'Инициализация БД на production: создаёт admin-пользователя если его нет'
+    help = 'Инициализация БД на production: создаёт необходимых пользователей'
 
     def handle(self, *args, **options):
-        username = os.environ.get('DJANGO_ADMIN_USERNAME', 'admin')
-        password = os.environ.get('DJANGO_ADMIN_PASSWORD', 'Admin1234!')
-        email = os.environ.get('DJANGO_ADMIN_EMAIL', 'admin@example.com')
+        for u in PRODUCTION_USERS:
+            user, created = User.objects.get_or_create(username=u['username'])
+            user.set_password(u['password'])
+            user.first_name = u['first_name']
+            user.last_name = u['last_name']
+            user.email = u['email']
+            user.is_superuser = u['is_superuser']
+            user.is_staff = u['is_staff']
+            user.save()
 
-        if User.objects.filter(username=username).exists():
-            user = User.objects.get(username=username)
-            # Ensure profile has admin role
             profile, _ = UserProfile.objects.get_or_create(user=user)
-            if profile.role != 'admin':
-                profile.role = 'admin'
-                profile.save()
-            self.stdout.write(self.style.SUCCESS(f'✅ Пользователь "{username}" уже существует'))
-            return
+            profile.role = u['role']
+            profile.position = u['position']
+            profile.department = u['department']
+            profile.save()
 
-        user = User.objects.create_superuser(
-            username=username,
-            email=email,
-            password=password,
-            first_name='Администратор',
-            last_name='Системы',
-        )
-        UserProfile.objects.create(
-            user=user,
-            role='admin',
-            position='Системный администратор',
-            department='IT отдел',
-        )
-        self.stdout.write(self.style.SUCCESS(
-            f'✅ Создан пользователь "{username}" (роль: admin)\n'
-            f'   Логин: {username}\n'
-            f'   Пароль: {password}'
-        ))
+            action = 'Создан' if created else 'Обновлён'
+            self.stdout.write(self.style.SUCCESS(
+                f'✅ {action}: {u["username"]} ({u["role"]})'
+            ))
