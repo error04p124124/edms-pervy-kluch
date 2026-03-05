@@ -12,6 +12,7 @@ urlpatterns = [
     path('documents/', views.DocumentListView.as_view(), name='document_list'),
     path('documents/create/', views.DocumentCreateView.as_view(), name='document_create'),
     path('documents/create-from-template/', views.create_from_template, name='create_from_template'),
+    path('documents/template-placeholders/<int:pk>/', views.template_placeholders_json, name='template_placeholders_json'),
     path('documents/<int:pk>/', views.DocumentDetailView.as_view(), name='document_detail'),
     path('documents/<int:pk>/edit/', views.DocumentUpdateView.as_view(), name='document_edit'),
     path('documents/<int:pk>/delete/', views.DocumentDeleteView.as_view(), name='document_delete'),

@@ -632,6 +632,17 @@ def create_from_template(request):
 
 
 @login_required
+def template_placeholders_json(request, pk):
+    """AJAX: возвращает список плейсхолдеров шаблона в JSON"""
+    from django.http import JsonResponse
+    template = get_object_or_404(DocumentTemplate, pk=pk, is_active=True)
+    phs = template.placeholders or []
+    if isinstance(phs, dict):
+        phs = [{'name': k, **v} for k, v in phs.items()]
+    return JsonResponse({'placeholders': phs})
+
+
+@login_required
 def download_template_file(request, pk):
     """Скачивание файла шаблона"""
     template = get_object_or_404(DocumentTemplate, pk=pk)

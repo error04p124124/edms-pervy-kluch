@@ -117,14 +117,140 @@ TEMPLATES_DATA = [
      'Смета расходов по проекту или мероприятию'),
 ]
 
+# ─── Плейсхолдеры для каждого шаблона ─────────────────────────────────────────
+TEMPLATE_PLACEHOLDERS = {
+    'Приказ о приёме на работу': [
+        {'name': 'ФИО', 'label': 'ФИО сотрудника', 'type': 'text', 'required': True},
+        {'name': 'должность', 'label': 'Должность', 'type': 'text', 'required': True},
+        {'name': 'отдел', 'label': 'Подразделение', 'type': 'text', 'required': True},
+        {'name': 'дата_приёма', 'label': 'Дата приёма на работу', 'type': 'date', 'required': True},
+        {'name': 'оклад', 'label': 'Должностной оклад (руб.)', 'type': 'text', 'required': True},
+        {'name': 'испытательный_срок', 'label': 'Испытательный срок (мес.)', 'type': 'text', 'required': False, 'default': '3'},
+    ],
+    'Приказ об отпуске': [
+        {'name': 'ФИО', 'label': 'ФИО сотрудника', 'type': 'text', 'required': True},
+        {'name': 'должность', 'label': 'Должность', 'type': 'text', 'required': True},
+        {'name': 'отдел', 'label': 'Подразделение', 'type': 'text', 'required': False},
+        {'name': 'дата_начала', 'label': 'Дата начала отпуска', 'type': 'date', 'required': True},
+        {'name': 'дата_окончания', 'label': 'Дата окончания отпуска', 'type': 'date', 'required': True},
+        {'name': 'количество_дней', 'label': 'Количество календарных дней', 'type': 'number', 'required': True},
+    ],
+    'Приказ о командировке': [
+        {'name': 'ФИО', 'label': 'ФИО сотрудника', 'type': 'text', 'required': True},
+        {'name': 'должность', 'label': 'Должность', 'type': 'text', 'required': True},
+        {'name': 'место_командировки', 'label': 'Место командировки', 'type': 'text', 'required': True},
+        {'name': 'цель', 'label': 'Цель командировки', 'type': 'textarea', 'required': True},
+        {'name': 'дата_отъезда', 'label': 'Дата отъезда', 'type': 'date', 'required': True},
+        {'name': 'дата_возврата', 'label': 'Дата возвращения', 'type': 'date', 'required': True},
+        {'name': 'количество_дней', 'label': 'Количество дней командировки', 'type': 'number', 'required': True},
+    ],
+    'Приказ о премировании': [
+        {'name': 'ФИО', 'label': 'ФИО сотрудника', 'type': 'text', 'required': True},
+        {'name': 'должность', 'label': 'Должность', 'type': 'text', 'required': True},
+        {'name': 'отдел', 'label': 'Подразделение', 'type': 'text', 'required': True},
+        {'name': 'основание', 'label': 'Основание для премирования', 'type': 'textarea', 'required': True},
+        {'name': 'сумма', 'label': 'Сумма премии (руб.)', 'type': 'text', 'required': True},
+        {'name': 'период', 'label': 'Расчётный период', 'type': 'text', 'required': True},
+    ],
+    'Трудовой договор': [
+        {'name': 'ФИО_работника', 'label': 'ФИО работника', 'type': 'text', 'required': True},
+        {'name': 'должность', 'label': 'Должность', 'type': 'text', 'required': True},
+        {'name': 'отдел', 'label': 'Подразделение', 'type': 'text', 'required': True},
+        {'name': 'оклад', 'label': 'Должностной оклад (руб.)', 'type': 'text', 'required': True},
+        {'name': 'дата_начала', 'label': 'Дата начала работы', 'type': 'date', 'required': True},
+        {'name': 'режим_работы', 'label': 'Режим рабочего времени', 'type': 'text', 'required': False, 'default': '5/2, 9:00–18:00'},
+        {'name': 'адрес_работника', 'label': 'Адрес регистрации работника', 'type': 'text', 'required': False},
+    ],
+    'Договор поставки': [
+        {'name': 'контрагент', 'label': 'Наименование контрагента', 'type': 'text', 'required': True},
+        {'name': 'ИНН_контрагента', 'label': 'ИНН контрагента', 'type': 'text', 'required': True},
+        {'name': 'предмет_договора', 'label': 'Предмет договора (наименование товаров)', 'type': 'textarea', 'required': True},
+        {'name': 'сумма_договора', 'label': 'Сумма договора (руб.)', 'type': 'text', 'required': True},
+        {'name': 'срок_поставки', 'label': 'Срок поставки (дней)', 'type': 'text', 'required': True},
+        {'name': 'условия_оплаты', 'label': 'Условия оплаты', 'type': 'text', 'required': False, 'default': '100% предоплата'},
+    ],
+    'Договор подряда': [
+        {'name': 'подрядчик', 'label': 'Наименование подрядчика', 'type': 'text', 'required': True},
+        {'name': 'ИНН_подрядчика', 'label': 'ИНН подрядчика', 'type': 'text', 'required': False},
+        {'name': 'предмет_работ', 'label': 'Предмет и объём работ', 'type': 'textarea', 'required': True},
+        {'name': 'стоимость', 'label': 'Стоимость работ (руб.)', 'type': 'text', 'required': True},
+        {'name': 'срок_начала', 'label': 'Дата начала работ', 'type': 'date', 'required': True},
+        {'name': 'срок_окончания', 'label': 'Дата окончания работ', 'type': 'date', 'required': True},
+    ],
+    'Акт приёма-передачи': [
+        {'name': 'передаёт', 'label': 'Кто передаёт (ФИО, должность)', 'type': 'text', 'required': True},
+        {'name': 'принимает', 'label': 'Кто принимает (ФИО, должность)', 'type': 'text', 'required': True},
+        {'name': 'перечень', 'label': 'Перечень передаваемых документов / имущества', 'type': 'textarea', 'required': True},
+        {'name': 'количество', 'label': 'Количество позиций', 'type': 'number', 'required': False},
+        {'name': 'состояние', 'label': 'Состояние при передаче', 'type': 'text', 'required': False, 'default': 'Удовлетворительное'},
+    ],
+    'Акт выполненных работ': [
+        {'name': 'исполнитель', 'label': 'Исполнитель', 'type': 'text', 'required': True},
+        {'name': 'заказчик', 'label': 'Заказчик', 'type': 'text', 'required': True},
+        {'name': 'номер_договора', 'label': 'Номер договора', 'type': 'text', 'required': True},
+        {'name': 'наименование_работ', 'label': 'Наименование выполненных работ', 'type': 'textarea', 'required': True},
+        {'name': 'стоимость', 'label': 'Стоимость работ (руб.)', 'type': 'text', 'required': True},
+        {'name': 'период', 'label': 'Период выполнения работ', 'type': 'text', 'required': True},
+    ],
+    'Служебная записка': [
+        {'name': 'от_кого', 'label': 'От кого (ФИО, должность)', 'type': 'text', 'required': True},
+        {'name': 'кому', 'label': 'Кому (ФИО, должность адресата)', 'type': 'text', 'required': True},
+        {'name': 'тема', 'label': 'Тема записки', 'type': 'text', 'required': True},
+        {'name': 'содержание', 'label': 'Содержание записки', 'type': 'textarea', 'required': True},
+    ],
+    'Финансовый отчёт': [
+        {'name': 'отдел', 'label': 'Наименование подразделения', 'type': 'text', 'required': True},
+        {'name': 'период', 'label': 'Отчётный период', 'type': 'text', 'required': True},
+        {'name': 'доходы', 'label': 'Итого доходы (руб.)', 'type': 'text', 'required': True},
+        {'name': 'расходы', 'label': 'Итого расходы (руб.)', 'type': 'text', 'required': True},
+        {'name': 'прибыль', 'label': 'Прибыль / убыток (руб.)', 'type': 'text', 'required': False},
+        {'name': 'ответственный', 'label': 'Ответственный исполнитель', 'type': 'text', 'required': True},
+    ],
+    'Квартальный отчёт': [
+        {'name': 'отдел', 'label': 'Наименование подразделения', 'type': 'text', 'required': True},
+        {'name': 'квартал', 'label': 'Отчётный квартал (например: I кв. 2026)', 'type': 'text', 'required': True},
+        {'name': 'руководитель', 'label': 'ФИО руководителя', 'type': 'text', 'required': True},
+        {'name': 'ключевые_результаты', 'label': 'Ключевые результаты периода', 'type': 'textarea', 'required': True},
+        {'name': 'проблемы', 'label': 'Проблемы и риски', 'type': 'textarea', 'required': False},
+        {'name': 'план_следующего', 'label': 'План на следующий период', 'type': 'textarea', 'required': False},
+    ],
+    'Письмо контрагенту': [
+        {'name': 'адресат', 'label': 'Адресат (организация)', 'type': 'text', 'required': True},
+        {'name': 'контактное_лицо', 'label': 'Контактное лицо', 'type': 'text', 'required': False},
+        {'name': 'тема_письма', 'label': 'Тема письма', 'type': 'text', 'required': True},
+        {'name': 'содержание', 'label': 'Содержание письма', 'type': 'textarea', 'required': True},
+        {'name': 'от_кого', 'label': 'Подписант (ФИО, должность)', 'type': 'text', 'required': True},
+    ],
+    'Заявление на отпуск': [
+        {'name': 'ФИО', 'label': 'ФИО заявителя', 'type': 'text', 'required': True},
+        {'name': 'должность', 'label': 'Должность', 'type': 'text', 'required': True},
+        {'name': 'отдел', 'label': 'Подразделение', 'type': 'text', 'required': False},
+        {'name': 'тип_отпуска', 'label': 'Вид отпуска', 'type': 'text', 'required': True, 'default': 'ежегодный оплачиваемый'},
+        {'name': 'дата_начала', 'label': 'Дата начала отпуска', 'type': 'date', 'required': True},
+        {'name': 'дата_окончания', 'label': 'Дата окончания отпуска', 'type': 'date', 'required': True},
+        {'name': 'количество_дней', 'label': 'Количество календарных дней', 'type': 'number', 'required': True},
+    ],
+    'Смета расходов': [
+        {'name': 'проект', 'label': 'Наименование проекта / мероприятия', 'type': 'text', 'required': True},
+        {'name': 'отдел', 'label': 'Подразделение', 'type': 'text', 'required': True},
+        {'name': 'период', 'label': 'Период', 'type': 'text', 'required': True},
+        {'name': 'статья_1', 'label': 'Статья расходов 1', 'type': 'text', 'required': False},
+        {'name': 'сумма_1', 'label': 'Сумма по статье 1 (руб.)', 'type': 'text', 'required': False},
+        {'name': 'статья_2', 'label': 'Статья расходов 2', 'type': 'text', 'required': False},
+        {'name': 'сумма_2', 'label': 'Сумма по статье 2 (руб.)', 'type': 'text', 'required': False},
+        {'name': 'итого', 'label': 'Итоговая сумма (руб.)', 'type': 'text', 'required': True},
+    ],
+}
+
 
 # ─── Генераторы файлов ────────────────────────────────────────────────────────
 
-def _make_docx(title, body_text):
+def _make_docx(title, body_text, placeholders=None):
     from docx import Document as DocxDoc
     from docx.shared import Pt, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+    placeholders = placeholders or []
     doc = DocxDoc()
     h = doc.add_heading(title, level=1)
     h.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -132,23 +258,30 @@ def _make_docx(title, body_text):
         run.font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
 
     doc.add_paragraph()
-    doc.add_heading('Плейсхолдеры', level=2)
-    for ph in ['{{ФИО}}', '{{должность}}', '{{отдел}}', '{{дата}}', '{{номер}}']:
-        doc.add_paragraph(ph, style='List Bullet')
+    if placeholders:
+        doc.add_heading('Поля для заполнения', level=2)
+        for ph in placeholders:
+            marker = '{{' + ph['name'] + '}}'
+            label = ph.get('label', ph['name'])
+            doc.add_paragraph(f'{label}: {marker}', style='List Bullet')
+        doc.add_paragraph()
 
-    doc.add_paragraph()
     doc.add_heading('Раздел 1. Основные сведения', level=2)
-    doc.add_paragraph('ФИО исполнителя: {{ФИО}}')
-    doc.add_paragraph('Должность: {{должность}}')
-    doc.add_paragraph('Отдел: {{отдел}}')
+    for ph in placeholders:
+        marker = '{{' + ph['name'] + '}}'
+        label = ph.get('label', ph['name'])
+        doc.add_paragraph(f'{label}: {marker}')
 
-    doc.add_heading('Раздел 2. Реквизиты', level=2)
-    doc.add_paragraph('Дата составления: {{дата}}')
-    doc.add_paragraph('Номер документа: {{номер}}')
+    if not placeholders:
+        doc.add_paragraph('ФИО исполнителя: {{ФИО}}')
+        doc.add_paragraph('Должность: {{должность}}')
+        doc.add_paragraph('Отдел: {{отдел}}')
 
-    doc.add_heading('Раздел 3. Содержание', level=2)
+    doc.add_heading('Раздел 2. Содержание', level=2)
     doc.add_paragraph(body_text)
+    doc.add_paragraph()
     doc.add_paragraph('Подпись: _______________')
+    doc.add_paragraph('Дата подписания: _______________')
 
     buf = BytesIO()
     doc.save(buf)
@@ -156,24 +289,30 @@ def _make_docx(title, body_text):
     return buf.read()
 
 
-def _make_xlsx(title):
+def _make_xlsx(title, placeholders=None):
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
 
+    placeholders = placeholders or []
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = title[:31]
 
-    headers = ['Параметр', 'Плейсхолдер', 'Значение', 'Примечание']
-    rows = [
-        ('ФИО', '{{ФИО}}', '', 'Заполнить'),
-        ('Должность', '{{должность}}', '', 'Заполнить'),
-        ('Отдел', '{{отдел}}', '', 'Заполнить'),
-        ('Дата', '{{дата}}', '', 'Заполнить'),
-        ('Номер', '{{номер}}', '', 'Заполнить'),
-        ('Сумма', '{{сумма}}', '', 'Если применимо'),
-        ('Период', '{{период}}', '', 'Если применимо'),
-    ]
+    headers = ['Поле', 'Плейсхолдер', 'Значение', 'Примечание']
+
+    if placeholders:
+        rows = [
+            (ph.get('label', ph['name']), '{{' + ph['name'] + '}}', '', 'Обязательно' if ph.get('required') else 'Необязательно')
+            for ph in placeholders
+        ]
+    else:
+        rows = [
+            ('ФИО', '{{ФИО}}', '', 'Заполнить'),
+            ('Должность', '{{должность}}', '', 'Заполнить'),
+            ('Отдел', '{{отдел}}', '', 'Заполнить'),
+            ('Дата', '{{дата}}', '', 'Заполнить'),
+            ('Номер', '{{номер}}', '', 'Заполнить'),
+        ]
 
     ws.merge_cells('A1:D1')
     tc = ws['A1']
@@ -193,10 +332,10 @@ def _make_xlsx(title):
         for c, val in enumerate(row, 1):
             ws.cell(row=r, column=c, value=val)
 
-    ws.column_dimensions['A'].width = 18
-    ws.column_dimensions['B'].width = 18
-    ws.column_dimensions['C'].width = 20
-    ws.column_dimensions['D'].width = 20
+    ws.column_dimensions['A'].width = 22
+    ws.column_dimensions['B'].width = 20
+    ws.column_dimensions['C'].width = 22
+    ws.column_dimensions['D'].width = 16
 
     buf = BytesIO()
     wb.save(buf)
@@ -204,7 +343,8 @@ def _make_xlsx(title):
     return buf.read()
 
 
-def _generate_template_file(name, fmt):
+def _generate_template_file(name, fmt, placeholders=None):
+    placeholders = placeholders or []
     body = (
         f'Настоящий документ «{name}» составлен в соответствии с '
         'внутренними регламентами организации и является обязательным '
@@ -212,13 +352,13 @@ def _generate_template_file(name, fmt):
     )
     safe_name = name.replace(' ', '_').replace('/', '-').replace('«', '').replace('»', '')
     if fmt == 'docx':
-        data = _make_docx(name, body)
+        data = _make_docx(name, body, placeholders)
         filename = f'{safe_name}.docx'
     elif fmt == 'xlsx':
-        data = _make_xlsx(name)
+        data = _make_xlsx(name, placeholders)
         filename = f'{safe_name}.xlsx'
     else:
-        data = _make_docx(name, body)
+        data = _make_docx(name, body, placeholders)
         filename = f'{safe_name}.docx'
     return ContentFile(data), filename
 
@@ -283,11 +423,13 @@ class Command(BaseCommand):
             tpl.file_format = fmt
             tpl.description = desc
             tpl.is_active = True
+            phs = TEMPLATE_PLACEHOLDERS.get(name, [])
+            tpl.placeholders = phs
             tpl.html_template = f'<h1>{name}</h1><p>{{{{ФИО}}}}, {{{{отдел}}}}</p>'
-            file_content, filename = _generate_template_file(name, fmt)
+            file_content, filename = _generate_template_file(name, fmt, phs)
             tpl.template_file.save(filename, file_content, save=False)
             tpl.save()
-            self.stdout.write(f'  📄 Шаблон: {name} ({fmt})')
+            self.stdout.write(f'  📄 Шаблон: {name} ({fmt}, {len(phs)} плейсхолд.)')
 
     def _seed_documents(self):
         all_users = list(User.objects.all())

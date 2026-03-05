@@ -264,11 +264,10 @@
                 </div>
             </div>
 
-            <!-- Поля шаблона -->
-            {% if form.fields|length > 4 %}
-            <div class="form-section">
+            <!-- Поля шаблона: сервер рендерит при обновлении страницы, AJAX при смене выбора -->
+            <div id="placeholder-fields-section" class="form-section"{% if not form.fields|length > 4 %} style="display:none;"{% endif %}>
                 <h3 class="form-section-title">✏️ Поля шаблона</h3>
-                <div class="placeholders-grid">
+                <div id="placeholder-fields-grid" class="placeholders-grid">
                     {% for field in form %}
                     {% if 'placeholder_' in field.name %}
                     <div class="form-group" style="margin-bottom:0;">
@@ -283,7 +282,6 @@
                     {% endfor %}
                 </div>
             </div>
-            {% endif %}
 
             <!-- Параметры -->
             <div class="form-section">
@@ -337,13 +335,69 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Reload page with template param when template changes
     const templateSelect = document.getElementById('id_template');
+    const phSection = document.getElementById('placeholder-fields-section');
+    const phGrid = document.getElementById('placeholder-fields-grid');
+
+    function buildField(ph) {
+        const name = 'placeholder_' + ph.name;
+        const label = ph.label || ph.name;
+        const required = ph.required ? 'required' : '';
+        const requiredStar = ph.required ? '<span class="required-star">*</span>' : '';
+        const defaultVal = ph.default || '';
+        let input = '';
+
+        if (ph.type === 'textarea') {
+            input = `<textarea name="${name}" id="id_${name}" class="form-textarea" rows="3" ${required}>${defaultVal}</textarea>`;
+        } else if (ph.type === 'date') {
+            input = `<input type="date" name="${name}" id="id_${name}" class="form-input" value="${defaultVal}" ${required}>`;
+        } else if (ph.type === 'number') {
+            input = `<input type="number" name="${name}" id="id_${name}" class="form-input" value="${defaultVal}" ${required}>`;
+        } else {
+            input = `<input type="text" name="${name}" id="id_${name}" class="form-input" value="${defaultVal}" ${required}>`;
+        }
+
+        const helpHtml = ph.help_text ? `<span class="form-help">${ph.help_text}</span>` : '';
+        return `<div class="form-group" style="margin-bottom:0;">
+            <label for="id_${name}" class="form-label">${label}${requiredStar}</label>
+            ${input}
+            ${helpHtml}
+        </div>`;
+    }
+
+    function loadPlaceholders(templateId) {
+        if (!templateId) {
+            phSection.style.display = 'none';
+            phGrid.innerHTML = '';
+            return;
+        }
+        fetch(`/documents/template-placeholders/${templateId}/`)
+            .then(r => r.json())
+            .then(data => {
+                const phs = data.placeholders || [];
+                if (phs.length === 0) {
+                    phSection.style.display = 'none';
+                    phGrid.innerHTML = '';
+                    return;
+                }
+                phGrid.innerHTML = phs.map(buildField).join('');
+                phSection.style.display = '';
+            })
+            .catch(() => {
+                // Fallback: page reload
+                window.location.href = '{% url "documents:create_from_template" %}?template=' + templateId;
+            });
+    }
+
     if (templateSelect) {
         templateSelect.addEventListener('change', function () {
-            const val = this.value;
-            if (val) {
-                window.location.href = '{% url "documents:create_from_template" %}?template=' + val;
-            }
+            loadPlaceholders(this.value);
         });
+        // If template is already selected on page load but no server-rendered fields, load via AJAX
+        const initialTpl = templateSelect.value;
+        const hasServerFields = phGrid && phGrid.children.length > 0;
+        if (initialTpl && !hasServerFields) {
+            loadPlaceholders(initialTpl);
+        }
     }
 });
 </script>
