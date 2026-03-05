@@ -1,0 +1,350 @@
+﻿{% extends 'base_modern.html' %}
+{% load static %}
+
+{% block title %}РЎРѕР·РґР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р° РёР· С€Р°Р±Р»РѕРЅР° - Р­Р”Рћ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-page-header {
+        margin-bottom: 2rem;
+    }
+
+    .form-page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .form-page-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+    .form-section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .required-star {
+        color: #ef4444;
+        margin-left: 0.25rem;
+    }
+
+    .form-input, .form-select, .form-textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        background: #f9fafb;
+        box-sizing: border-box;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-textarea {
+        min-height: 100px;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    .form-help {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 0.375rem;
+        display: block;
+    }
+
+    .form-error {
+        color: #ef4444;
+        font-size: 0.85rem;
+        margin-top: 0.375rem;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .placeholders-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem 1.5rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 2px solid #e5e7eb;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        padding: 0.875rem 2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+        border: 2px solid #e5e7eb;
+        padding: 0.875rem 2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+        color: #111827;
+    }
+
+    .alert-modern {
+        padding: 1rem 1.25rem;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: start;
+        gap: 0.75rem;
+    }
+
+    .alert-info {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e40af;
+    }
+
+    /* Apply form-control/form-select from Django widgets */
+    #document-form .form-control,
+    #document-form .form-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        background: #f9fafb;
+        box-shadow: none;
+        box-sizing: border-box;
+        transition: all 0.2s;
+    }
+
+    #document-form .form-control:focus,
+    #document-form .form-select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    @media (max-width: 768px) {
+        .form-card { padding: 1.5rem; }
+        .form-row, .placeholders-grid { grid-template-columns: 1fr; }
+        .form-actions { flex-direction: column; }
+        .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="form-page-header">
+        <h1 class="form-page-title">
+            <span>рџ“„</span> РЎРѕР·РґР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р° РёР· С€Р°Р±Р»РѕРЅР°
+        </h1>
+        <p class="form-page-subtitle">Р’С‹Р±РµСЂРёС‚Рµ С€Р°Р±Р»РѕРЅ, Р·Р°РїРѕР»РЅРёС‚Рµ РїРѕР»СЏ Рё РїРѕР»СѓС‡РёС‚Рµ РіРѕС‚РѕРІС‹Р№ С„Р°Р№Р»</p>
+    </div>
+
+    <div class="form-card">
+        <form method="post" id="document-form">
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="alert-modern alert-info">
+                <i class="fas fa-exclamation-circle" style="font-size:1.25rem;"></i>
+                <div>
+                    <strong>РћР±РЅР°СЂСѓР¶РµРЅС‹ РѕС€РёР±РєРё РІ С„РѕСЂРјРµ.</strong>
+                    <ul style="margin:0.5rem 0 0;padding-left:1.25rem;">
+                        {% for field, errors in form.errors.items %}{% for error in errors %}<li>{{ error }}</li>{% endfor %}{% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- РЁР°Р±Р»РѕРЅ Рё РЅР°Р·РІР°РЅРёРµ -->
+            <div class="form-section">
+                <h3 class="form-section-title">рџ“‹ РћСЃРЅРѕРІРЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="id_template" class="form-label">
+                            <i class="fas fa-layer-group" style="color:var(--primary-500,#6366f1);"></i>
+                            РЁР°Р±Р»РѕРЅ РґРѕРєСѓРјРµРЅС‚Р°<span class="required-star">*</span>
+                        </label>
+                        {{ form.template }}
+                        {% if form.template.errors %}
+                        <span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ form.template.errors.0 }}</span>
+                        {% endif %}
+                        <span class="form-help">РџРѕСЃР»Рµ РІС‹Р±РѕСЂР° С€Р°Р±Р»РѕРЅР° РїРѕСЏРІСЏС‚СЃСЏ РїРѕР»СЏ РґР»СЏ Р·Р°РїРѕР»РЅРµРЅРёСЏ</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_title" class="form-label">
+                            РќР°Р·РІР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°<span class="required-star">*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                        <span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ form.title.errors.0 }}</span>
+                        {% endif %}
+                        <span class="form-help">Р’РІРµРґРёС‚Рµ РїРѕРЅСЏС‚РЅРѕРµ РЅР°Р·РІР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- РџРѕР»СЏ С€Р°Р±Р»РѕРЅР° -->
+            {% if form.fields|length > 4 %}
+            <div class="form-section">
+                <h3 class="form-section-title">вњЏпёЏ РџРѕР»СЏ С€Р°Р±Р»РѕРЅР°</h3>
+                <div class="placeholders-grid">
+                    {% for field in form %}
+                    {% if 'placeholder_' in field.name %}
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="{{ field.id_for_label }}" class="form-label">
+                            {{ field.label }}{% if field.field.required %}<span class="required-star">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}<span class="form-help">{{ field.help_text }}</span>{% endif %}
+                        {% if field.errors %}<span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ field.errors.0 }}</span>{% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- РџР°СЂР°РјРµС‚СЂС‹ -->
+            <div class="form-section">
+                <h3 class="form-section-title">рџ“… Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="id_assigned_to" class="form-label">РћС‚РІРµС‚СЃС‚РІРµРЅРЅС‹Р№</label>
+                        {{ form.assigned_to }}
+                        {% if form.assigned_to.errors %}
+                        <span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ form.assigned_to.errors.0 }}</span>
+                        {% endif %}
+                        <span class="form-help">РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ, РѕС‚РІРµС‚СЃС‚РІРµРЅРЅС‹Р№ Р·Р° РґРѕРєСѓРјРµРЅС‚</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_deadline" class="form-label">РЎСЂРѕРє РёСЃРїРѕР»РЅРµРЅРёСЏ</label>
+                        {{ form.deadline }}
+                        {% if form.deadline.errors %}
+                        <span class="form-error"><i class="fas fa-exclamation-circle"></i>{{ form.deadline.errors.0 }}</span>
+                        {% endif %}
+                        <span class="form-help">Р”Р°С‚Р°, РґРѕ РєРѕС‚РѕСЂРѕР№ РґРѕРєСѓРјРµРЅС‚ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РѕР±СЂР°Р±РѕС‚Р°РЅ</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-bolt"></i>
+                    РЎРѕР·РґР°С‚СЊ Рё СЃРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ РґРѕРєСѓРјРµРЅС‚
+                </button>
+                <a href="{% url 'documents:template_list' %}" class="btn-secondary">
+                    <i class="fas fa-times"></i>
+                    РћС‚РјРµРЅР°
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Apply form-input/form-select/form-textarea classes to Django widgets
+    document.querySelectorAll('#document-form input[type=text], #document-form input[type=number], #document-form input[type=date], #document-form input[type=email]').forEach(function(el) {
+        el.classList.add('form-input');
+    });
+    document.querySelectorAll('#document-form select').forEach(function(el) {
+        el.classList.add('form-select');
+    });
+    document.querySelectorAll('#document-form textarea').forEach(function(el) {
+        el.classList.add('form-textarea');
+    });
+
+    // Reload page with template param when template changes
+    const templateSelect = document.getElementById('id_template');
+    if (templateSelect) {
+        templateSelect.addEventListener('change', function () {
+            const val = this.value;
+            if (val) {
+                window.location.href = '{% url "documents:create_from_template" %}?template=' + val;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

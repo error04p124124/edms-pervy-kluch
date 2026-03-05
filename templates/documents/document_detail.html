@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+{% load static permission_tags %}
+
+{% block title %}{{ document.title }} - ЭДО{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt"></i> {{ document.title }}
+                </h5>
+                <span class="badge {% if document.status == 'approved' %}bg-success{% elif document.status == 'in_review' %}bg-warning{% elif document.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ document.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Регистрационный номер:</strong><br>
+                        <span class="fs-5 text-primary">{{ document.registry_number|default:"Не присвоен" }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Тип документа:</strong><br>
+                        {% if document.template %}
+                            {{ document.template.get_type_display }}
+                        {% else %}
+                            Не указан
+                        {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Создатель:</strong><br>
+                        {{ document.created_by.get_full_name|default:document.created_by.username }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Ответственный:</strong><br>
+                        {% if document.assigned_to %}
+                            {{ document.assigned_to.get_full_name|default:document.assigned_to.username }}
+                        {% else %}
+                            Не назначен
+                        {% endif %}</p>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Дата создания:</strong><br>
+                        {{ document.created_at|date:"d.m.Y H:i" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Срок исполнения:</strong><br>
+                        {% if document.deadline %}
+                            {{ document.deadline|date:"d.m.Y" }}
+                            {% if document.is_overdue %}
+                                <span class="badge bg-danger">Просрочено</span>
+                            {% endif %}
+                        {% else %}
+                            Не указан
+                        {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                {% if document.file %}
+                <div class="mb-3">
+                    <p><strong>Загруженный файл:</strong><br>
+                    <a href="{{ document.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        <i class="fas fa-download"></i> Скачать загруженный файл
+                    </a>
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if document.generated_file %}
+                <div class="mb-3">
+                    <p><strong>Сгенерированный документ:</strong><br>
+                    <a href="{% url 'documents:download_generated' document.id %}" class="btn btn-sm btn-gradient">
+                        <i class="fas fa-file-download"></i> Скачать {{ document.template.get_file_format_display|default:"документ" }}
+                    </a>
+                    <span class="text-muted small ms-2">
+                        <i class="fas fa-info-circle"></i> 
+                        Создан из шаблона "{{ document.template.name }}"
+                    </span>
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if document.content %}
+                <div class="mb-3">
+                    <strong>Содержание:</strong>
+                    <div class="border p-3 mt-2 bg-light">
+                        {{ document.content|linebreaks|safe }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Actions -->
+                <div class="d-flex gap-2 flex-wrap mt-4">
+                    {% user_can_edit_document user document as can_edit %}
+                    {% if can_edit %}
+                    <a href="{% url 'documents:document_edit' document.id %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Редактировать
+                    </a>
+                    {% endif %}
+                    
+                    {% user_can_manage_templates user as can_manage %}
+                    {% if can_manage %}
+                        {% if document.status == 'draft' %}
+                        <a href="{% url 'documents:register_document' document.id %}" class="btn btn-success">
+                            <i class="fas fa-stamp"></i> Зарегистрировать
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'documents:setup_workflow' document.id %}" class="btn btn-info text-white">
+                            <i class="fas fa-route"></i> Маршрут согласования
+                        </a>
+                        
+                        {% if document.status != 'archived' %}
+                        <a href="{% url 'documents:archive_document' document.id %}" class="btn btn-secondary" 
+                           onclick="return confirm('Переместить документ в архив?')">
+                            <i class="fas fa-archive"></i> В архив
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% user_can_delete_document user document as can_delete %}
+                    {% if can_delete %}
+                    <a href="{% url 'documents:document_delete' document.id %}" class="btn btn-danger"
+                       onclick="return confirm('Удалить документ?')">
+                        <i class="fas fa-trash"></i> Удалить
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'documents:document_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад к списку
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History -->
+        {% if history %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <i class="fas fa-history"></i> История изменений
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for entry in history %}
+                    <div class="timeline-item mb-3">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-circle text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="mb-1">
+                                    <strong>{{ entry.user.get_full_name|default:entry.user.username }}</strong> - 
+                                    {{ entry.action }}
+                                </p>
+                                {% if entry.comment %}
+                                <p class="text-muted small">{{ entry.comment }}</p>
+                                {% endif %}
+                                <small class="text-muted">{{ entry.created_at|date:"d.m.Y H:i" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Workflow Step Approval Form -->
+        {% for step in workflow_steps %}
+            {% if step.user == user and step.status == 'pending' %}
+                {% comment %}Check if all previous steps are approved{% endcomment %}
+                {% with can_approve=True %}
+                    {% for prev_step in workflow_steps %}
+                        {% if prev_step.step_number < step.step_number and prev_step.status == 'pending' %}
+                            {% with can_approve=False %}{% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if can_approve %}
+                    <div class="card mb-4 border-warning">
+                        <div class="card-header" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white;">
+                            <i class="fas fa-check-circle"></i> Согласование этапа {{ step.step_number }}
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Документ ожидает вашего согласования
+                            </div>
+                            <form method="post" action="{% url 'documents:approve_workflow_step' step.id %}">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="action" value="approve" id="stepApprove{{ step.id }}" required>
+                                        <label class="form-check-label" for="stepApprove{{ step.id }}">
+                                            <i class="fas fa-check text-success"></i> Согласовать
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="action" value="reject" id="stepReject{{ step.id }}">
+                                        <label class="form-check-label" for="stepReject{{ step.id }}">
+                                            <i class="fas fa-times text-danger"></i> Отклонить
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="stepComment{{ step.id }}" class="form-label">Комментарий</label>
+                                    <textarea class="form-control" name="comment" id="stepComment{{ step.id }}" rows="3" placeholder="Укажите причину отклонения или комментарий"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-paper-plane"></i> Отправить решение
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
+        {% endfor %}
+        
+        <!-- Old Approval Form (for managers without workflow) -->
+        {% user_can_approve_document user document as can_approve %}
+        {% if can_approve and document.assigned_to == user and document.status == 'in_review' and not workflow_steps %}
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-white">
+                <i class="fas fa-check-circle"></i> Согласование
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'documents:approve_document' document.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="action" value="approve" id="actionApprove" required>
+                            <label class="form-check-label" for="actionApprove">
+                                <i class="fas fa-check text-success"></i> Утвердить
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="action" value="reject" id="actionReject">
+                            <label class="form-check-label" for="actionReject">
+                                <i class="fas fa-times text-danger"></i> Отклонить
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Комментарий</label>
+                        <textarea class="form-control" name="comment" id="comment" rows="3" placeholder="Укажите причину отклонения или комментарий"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-paper-plane"></i> Отправить
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Workflow Steps -->
+        {% if workflow_steps %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <i class="fas fa-route"></i> Маршрут согласования
+            </div>
+            <div class="card-body">
+                {% for step in workflow_steps %}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="me-3">
+                        {% if step.status == 'approved' %}
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                        {% elif step.status == 'rejected' %}
+                            <i class="fas fa-times-circle fa-2x text-danger"></i>
+                        {% else %}
+                            <i class="fas fa-clock fa-2x text-warning"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="mb-0">
+                            <strong>Этап {{ step.step_number }}:</strong> {{ step.user.get_full_name|default:step.user.username }}
+                        </p>
+                        <small class="text-muted">{{ step.get_status_display }}</small>
+                        {% if step.comment %}
+                        <p class="text-muted small mb-0">{{ step.comment }}</p>
+                        {% endif %}
+                        {% if step.completed_at %}
+                        <small class="text-muted">{{ step.completed_at|date:"d.m.Y H:i" }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Document Info -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <i class="fas fa-info-circle"></i> Информация
+            </div>
+            <div class="card-body">
+                <p class="small mb-2">
+                    <strong>ID:</strong> {{ document.id }}
+                </p>
+                <p class="small mb-2">
+                    <strong>Создан:</strong> {{ document.created_at|date:"d.m.Y H:i" }}
+                </p>
+                <p class="small mb-0">
+                    <strong>Изменен:</strong> {{ document.updated_at|date:"d.m.Y H:i" }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

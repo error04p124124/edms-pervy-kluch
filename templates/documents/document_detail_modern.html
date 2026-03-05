@@ -1,0 +1,391 @@
+{% extends 'base_modern.html' %}
+{% load static permission_tags %}
+
+{% block title %}{{ document.title }} - ЭДО{% endblock %}
+
+{% block extra_css %}
+<style>
+.document-detail-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: var(--space-6);
+}
+
+@media (max-width: 1200px) {
+    .document-detail-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.document-property {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.document-property:last-child {
+    border-bottom: none;
+}
+
+.document-property-label {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    font-weight: var(--font-medium);
+}
+
+.document-property-value {
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    font-weight: var(--font-medium);
+    text-align: right;
+}
+
+.document-content-view {
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    border: 1px solid var(--border-light);
+    line-height: var(--leading-relaxed);
+    color: var(--text-primary);
+}
+
+.workflow-step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background-color: var(--bg-tertiary);
+    margin-bottom: var(--space-3);
+}
+
+.workflow-step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.history-item {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.history-timeline {
+    width: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.history-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    background-color: var(--primary-500);
+    border: 3px solid var(--primary-100);
+}
+
+.history-line {
+    width: 2px;
+    flex: 1;
+    background-color: var(--border-light);
+    margin: 4px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="modern-animate-in">
+    <!-- Back Button -->
+    <div style="margin-bottom: var(--space-4);">
+        <a href="{% url 'documents:document_list' %}" class="modern-btn modern-btn-ghost modern-btn-sm">
+            <i class="fas fa-arrow-left"></i>
+            <span>Назад к списку</span>
+        </a>
+    </div>
+    
+    <!-- Document Header -->
+    <div class="modern-card" style="margin-bottom: var(--space-6);">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6);">
+            <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2);">
+                    <h1 style="font-size: var(--text-3xl); font-weight: var(--font-bold); color: var(--text-primary); margin: 0;">
+                        {{ document.title }}
+                    </h1>
+                    {% if document.status == 'draft' %}
+                    <span class="modern-badge gray">Черновик</span>
+                    {% elif document.status == 'in_review' %}
+                    <span class="modern-badge warning">На согласовании</span>
+                    {% elif document.status == 'approved' %}
+                    <span class="modern-badge success">Утверждён</span>
+                    {% elif document.status == 'rejected' %}
+                    <span class="modern-badge error">Отклонён</span>
+                    {% elif document.status == 'archived' %}
+                    <span class="modern-badge gray">В архиве</span>
+                    {% endif %}
+                </div>
+                {% if document.registry_number %}
+                <div style="color: var(--text-secondary); font-size: var(--text-base);">
+                    Регистрационный номер: <strong>{{ document.registry_number }}</strong>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div style="display: flex; gap: var(--space-2);">
+                {% user_can_edit_document user document as can_edit %}
+                {% if can_edit %}
+                <a href="{% url 'documents:document_edit' document.id %}" class="modern-btn modern-btn-secondary">
+                    <i class="fas fa-edit"></i>
+                    Редактировать
+                </a>
+                {% endif %}
+                
+                {% if document.generated_file %}
+                <a href="{% url 'documents:download_generated' document.id %}" class="modern-btn modern-btn-primary">
+                    <i class="fas fa-download"></i>
+                    Скачать
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
+            {% user_can_manage_templates user as can_manage %}
+            {% if can_manage and document.status == 'draft' %}
+            <a href="{% url 'documents:register_document' document.id %}" class="modern-btn modern-btn-secondary modern-btn-sm">
+                <i class="fas fa-stamp"></i> Зарегистрировать
+            </a>
+            {% endif %}
+            
+            {% if can_manage %}
+            <a href="{% url 'documents:setup_workflow' document.id %}" class="modern-btn modern-btn-secondary modern-btn-sm">
+                <i class="fas fa-route"></i> Маршрут согласования
+            </a>
+            {% endif %}
+            
+            {% if can_manage and document.status != 'archived' %}
+            <a href="{% url 'documents:archive_document' document.id %}" class="modern-btn modern-btn-ghost modern-btn-sm">
+                <i class="fas fa-archive"></i> В архив
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'documents:document_signatures' document.id %}" class="modern-btn modern-btn-secondary modern-btn-sm"{% if document.is_signed %} style="color: #059669;"{% endif %}>
+                <i class="fas fa-file-signature"></i>
+                {% if document.is_signed %}Подписан{% else %}Подписи{% endif %}
+            </a>
+            
+            {% user_can_delete_document user document as can_delete %}
+            {% if can_delete %}
+            <a href="{% url 'documents:document_delete' document.id %}" class="modern-btn modern-btn-ghost modern-btn-sm" style="color: var(--error);" onclick="return confirm('Удалить документ?')">
+                <i class="fas fa-trash"></i> Удалить
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Main Content Layout -->
+    <div class="document-detail-layout">
+        <!-- Left Column: Content -->
+        <div>
+            {% if document.content %}
+            <div class="modern-card" style="margin-bottom: var(--space-6);">
+                <div class="modern-card-header">
+                    <h2 class="modern-card-title">Содержание документа</h2>
+                </div>
+                <div class="document-content-view">
+                    {{ document.content|linebreaks|safe }}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Workflow Steps -->
+            {% if workflow_steps %}
+            <div class="modern-card" style="margin-bottom: var(--space-6);">
+                <div class="modern-card-header">
+                    <h2 class="modern-card-title">Маршрут согласования</h2>
+                </div>
+                
+                {% for step in workflow_steps %}
+                <div class="workflow-step-item">
+                    <div class="workflow-step-icon" style="background-color: {% if step.status == 'approved' %}var(--success-light); color: var(--success){% elif step.status == 'rejected' %}var(--error-light); color: var(--error){% elif step.status == 'pending' %}var(--warning-light); color: var(--warning){% else %}var(--gray-100); color: var(--gray-500){% endif %};">
+                        {% if step.status == 'approved' %}
+                        <i class="fas fa-check"></i>
+                        {% elif step.status == 'rejected' %}
+                        <i class="fas fa-times"></i>
+                        {% elif step.status == 'pending' %}
+                        <i class="fas fa-clock"></i>
+                        {% else %}
+                        <i class="fas fa-user"></i>
+                        {% endif %}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-1);">
+                            <div>
+                                <div style="font-weight: var(--font-semibold); color: var(--text-primary);">
+                                    Шаг {{ step.step_number }}: {{ step.get_action_display }}
+                                </div>
+                                <div style="font-size: var(--text-sm); color: var(--text-secondary);">
+                                    Ответственный: {{ step.user.get_full_name|default:step.user.username }}
+                                </div>
+                            </div>
+                            {% if step.status == 'approved' %}
+                            <span class="modern-badge success">Одобрено</span>
+                            {% elif step.status == 'rejected' %}
+                            <span class="modern-badge error">Отклонено</span>
+                            {% elif step.status == 'pending' %}
+                            <span class="modern-badge warning">В ожидании</span>
+                            {% endif %}
+                        </div>
+                        {% if step.comment %}
+                        <div style="margin-top: var(--space-2); padding: var(--space-2); background-color: var(--bg-secondary); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--text-secondary);">
+                            {{ step.comment }}
+                        </div>
+                        {% endif %}
+                        {% if step.completed_at %}
+                        <div style="margin-top: var(--space-2); font-size: var(--text-xs); color: var(--text-tertiary);">
+                            {{ step.completed_at|date:"d.m.Y H:i" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- History -->
+            {% if history %}
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h2 class="modern-card-title">История изменений</h2>
+                </div>
+                
+                {% for item in history %}
+                <div class="history-item">
+                    <div class="history-timeline">
+                        <div class="history-dot"></div>
+                        {% if not forloop.last %}
+                        <div class="history-line"></div>
+                        {% endif %}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: var(--font-medium); color: var(--text-primary); margin-bottom: 2px;">
+                            {{ item.action }}
+                        </div>
+                        <div style="font-size: var(--text-sm); color: var(--text-secondary);">
+                            {{ item.user.get_full_name|default:item.user.username }} • 
+                            {{ item.created_at|date:"d.m.Y H:i" }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Right Column: Properties -->
+        <div>
+            <!-- Properties Card -->
+            <div class="modern-card" style="margin-bottom: var(--space-4);">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">Свойства</h3>
+                </div>
+                
+                <div class="document-property">
+                    <div class="document-property-label">Создатель</div>
+                    <div class="document-property-value">
+                        {{ document.created_by.get_full_name|default:document.created_by.username }}
+                    </div>
+                </div>
+                
+                <div class="document-property">
+                    <div class="document-property-label">Ответственный</div>
+                    <div class="document-property-value">
+                        {% if document.assigned_to %}
+                        {{ document.assigned_to.get_full_name|default:document.assigned_to.username }}
+                        {% else %}
+                        <span style="color: var(--text-tertiary);">Не назначен</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="document-property">
+                    <div class="document-property-label">Дата создания</div>
+                    <div class="document-property-value">{{ document.created_at|date:"d.m.Y H:i" }}</div>
+                </div>
+                
+                {% if document.deadline %}
+                <div class="document-property">
+                    <div class="document-property-label">Срок исполнения</div>
+                    <div class="document-property-value" style="{% if document.is_overdue %}color: var(--error); font-weight: var(--font-semibold);{% endif %}">
+                        {{ document.deadline|date:"d.m.Y" }}
+                        {% if document.is_overdue %}
+                        <i class="fas fa-exclamation-circle"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if document.template %}
+                <div class="document-property">
+                    <div class="document-property-label">Тип</div>
+                    <div class="document-property-value">{{ document.template.get_type_display }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Files Card -->
+            {% if document.file or document.generated_file %}
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">Файлы</h3>
+                </div>
+                
+                {% if document.generated_file %}
+                <a href="{% url 'documents:download_generated' document.id %}" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background-color: var(--bg-tertiary); text-decoration: none; transition: all var(--transition-fast); margin-bottom: var(--space-2);">
+                    <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background-color: var(--primary-100); display: flex; align-items: center; justify-content: center; color: var(--primary-600);">
+                        <i class="fas fa-file-word"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: var(--font-medium); color: var(--text-primary); font-size: var(--text-sm);">
+                            Сгенерированный документ
+                        </div>
+                        <div style="font-size: var(--text-xs); color: var(--text-tertiary);">
+                            {{ document.template.get_file_format_display|upper }}
+                        </div>
+                    </div>
+                    <i class="fas fa-download" style="color: var(--text-tertiary);"></i>
+                </a>
+                {% endif %}
+                
+                {% if document.file %}
+                <a href="{{ document.file.url }}" target="_blank" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background-color: var(--bg-tertiary); text-decoration: none; transition: all var(--transition-fast);">
+                    <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background-color: var(--gray-100); display: flex; align-items: center; justify-content: center; color: var(--gray-600);">
+                        <i class="fas fa-file"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: var(--font-medium); color: var(--text-primary); font-size: var(--text-sm);">
+                            Загруженный файл
+                        </div>
+                    </div>
+                    <i class="fas fa-external-link-alt" style="color: var(--text-tertiary);"></i>
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

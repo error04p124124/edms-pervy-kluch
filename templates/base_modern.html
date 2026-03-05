@@ -1,0 +1,881 @@
+{% load static permission_tags %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Система электронного документооборота ООО Первый ключ">
+    <title>{% block title %}ЭДО - Первый ключ{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Modern CSS -->
+    <link rel="stylesheet" href="{% static 'css/modern.css' %}">
+    
+    <!-- Toast Notifications Styles -->
+    <style>
+        /* Toast Container */
+        .toast-container {
+            position: fixed;
+            top: var(--space-6);
+            right: var(--space-6);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            max-width: 420px;
+            pointer-events: none;
+        }
+        
+        /* Toast Item */
+        .toast {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: var(--space-4);
+            display: flex;
+            align-items: start;
+            gap: var(--space-3);
+            pointer-events: auto;
+            transform: translateX(calc(100% + var(--space-6)));
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid var(--primary-500);
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .toast.hide {
+            transform: translateX(calc(100% + var(--space-6)));
+            opacity: 0;
+        }
+        
+        /* Toast Types */
+        .toast.toast-success {
+            border-left-color: var(--success-500);
+        }
+        
+        .toast.toast-error,
+        .toast.toast-danger {
+            border-left-color: var(--error-500);
+        }
+        
+        .toast.toast-warning {
+            border-left-color: var(--warning-500);
+        }
+        
+        .toast.toast-info {
+            border-left-color: var(--info-500);
+        }
+        
+        /* Toast Icon */
+        .toast-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 20px;
+        }
+        
+        .toast-success .toast-icon {
+            background: var(--success-100);
+            color: var(--success-600);
+        }
+        
+        .toast-error .toast-icon,
+        .toast-danger .toast-icon {
+            background: var(--error-100);
+            color: var(--error-600);
+        }
+        
+        .toast-warning .toast-icon {
+            background: var(--warning-100);
+            color: var(--warning-600);
+        }
+        
+        .toast-info .toast-icon {
+            background: var(--info-100);
+            color: var(--info-600);
+        }
+        
+        /* Toast Content */
+        .toast-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .toast-message {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        
+        /* Toast Close Button */
+        .toast-close {
+            width: 24px;
+            height: 24px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .toast-close:hover {
+            background: var(--gray-100);
+            color: var(--text-primary);
+        }
+        
+        /* Toast Progress Bar */
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: currentColor;
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            opacity: 0.3;
+            transform-origin: left;
+        }
+        
+        .toast-success .toast-progress {
+            color: var(--success-500);
+        }
+        
+        .toast-error .toast-progress,
+        .toast-danger .toast-progress {
+            color: var(--error-500);
+        }
+        
+        .toast-warning .toast-progress {
+            color: var(--warning-500);
+        }
+        
+        .toast-info .toast-progress {
+            color: var(--info-500);
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .toast-container {
+                top: var(--space-4);
+                right: var(--space-4);
+                left: var(--space-4);
+                max-width: none;
+            }
+            
+            .toast {
+                transform: translateY(-100%);
+            }
+            
+            .toast.show {
+                transform: translateY(0);
+            }
+            
+            .toast.hide {
+                transform: translateY(-100%);
+            }
+        }
+        
+        /* Notifications Dropdown */
+        .notifications-dropdown {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            width: 400px;
+            max-height: 600px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .notifications-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .notifications-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .notifications-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            color: #111827;
+        }
+        
+        .notifications-mark-all {
+            border: none;
+            background: transparent;
+            color: #3b82f6;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .notifications-mark-all:hover {
+            background: #f0f9ff;
+        }
+        
+        .notifications-list {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 450px;
+        }
+        
+        .notifications-loading {
+            padding: 2rem;
+            text-align: center;
+            color: #6b7280;
+        }
+        
+        .notification-item {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        .notification-item:hover {
+            background: #f9fafb;
+        }
+        
+        .notification-item.unread {
+            background: #f0f9ff;
+        }
+        
+        .notification-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1e40af;
+            flex-shrink: 0;
+        }
+        
+        .notification-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .notification-message {
+            font-size: 0.875rem;
+            color: #111827;
+            margin-bottom: 0.25rem;
+            line-height: 1.4;
+        }
+        
+        .notification-time {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        
+        .notification-unread-dot {
+            width: 8px;
+            height: 8px;
+            background: #3b82f6;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 0.5rem;
+        }
+        
+        .notifications-footer {
+            padding: 0.75rem 1.25rem;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        
+        .notifications-footer a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .notifications-footer a:hover {
+            color: #2563eb;
+        }
+        
+        .notifications-empty {
+            padding: 3rem 2rem;
+            text-align: center;
+            color: #6b7280;
+        }
+        
+        .notifications-empty i {
+            font-size: 3rem;
+            color: #d1d5db;
+            margin-bottom: 0.75rem;
+        }
+        
+        @media (max-width: 768px) {
+            .notifications-dropdown {
+                width: calc(100vw - 2rem);
+                right: 1rem;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <!-- Modern SaaS Layout -->
+    <div class="modern-layout">
+        <!-- Sidebar -->
+        <aside class="modern-sidebar">
+            <!-- Logo -->
+            <div class="modern-sidebar-header">
+                <a href="{% url 'documents:dashboard' %}" class="modern-sidebar-logo">
+                    <div class="modern-sidebar-logo-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <span>Первый ключ</span>
+                </a>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="modern-sidebar-nav">
+                <!-- Main Section -->
+                <div class="modern-sidebar-section">
+                    <div class="modern-sidebar-section-title">Основное</div>
+                    <a href="{% url 'documents:dashboard' %}" class="modern-sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <span>Главная</span>
+                    </a>
+                    <a href="{% url 'documents:document_list' %}" class="modern-sidebar-item {% if request.resolver_match.url_name == 'document_list' %}active{% endif %}">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-inbox"></i>
+                        </div>
+                        <span>Все документы</span>
+                    </a>
+                    {% if user.profile.role == 'manager' or user.profile.role == 'admin' %}
+                    <a href="{% url 'documents:manager_approvals' %}" class="modern-sidebar-item {% if request.resolver_match.url_name == 'manager_approvals' %}active{% endif %}">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <span>Согласование</span>
+                        {% if pending_approvals > 0 %}
+                        <span class="modern-sidebar-item-badge">{{ pending_approvals }}</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'documents:chat' %}" class="modern-sidebar-item {% if request.resolver_match.url_name == 'chat' or request.resolver_match.url_name == 'chat_with_user' %}active{% endif %}">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <span>Чат</span>
+                        {% if unread_chat_count > 0 %}
+                        <span class="modern-sidebar-item-badge">{{ unread_chat_count }}</span>
+                        {% endif %}
+                    </a>
+                </div>
+                
+                <!-- Organization Section -->
+                <div class="modern-sidebar-section">
+                    <div class="modern-sidebar-section-title">Организация</div>
+                    <a href="{% url 'documents:document_list' %}?status=draft" class="modern-sidebar-item">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-file"></i>
+                        </div>
+                        <span>Черновики</span>
+                    </a>
+                    <a href="{% url 'documents:document_list' %}?status=in_review" class="modern-sidebar-item">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <span>В работе</span>
+                    </a>
+                    <a href="{% url 'documents:document_list' %}?status=approved" class="modern-sidebar-item">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <span>Утверждённые</span>
+                    </a>
+                    <a href="{% url 'documents:document_list' %}?status=archived" class="modern-sidebar-item">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-archive"></i>
+                        </div>
+                        <span>Архив</span>
+                    </a>
+                </div>
+                
+                <!-- Management Section -->
+                <div class="modern-sidebar-section">
+                    <div class="modern-sidebar-section-title">Управление</div>
+                    <a href="{% url 'documents:template_list' %}" class="modern-sidebar-item {% if request.resolver_match.url_name == 'template_list' %}active{% endif %}">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <span>Шаблоны</span>
+                    </a>
+                    {% if user.profile.role == 'admin' or user.profile.role == 'manager' %}
+                    <a href="{% url 'documents:reports' %}" class="modern-sidebar-item {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <span>Отчёты</span>
+                    </a>
+                    {% endif %}
+                    {% if user.profile.role == 'admin' %}
+                    <a href="{% url 'accounts:user_management' %}" class="modern-sidebar-item {% if request.resolver_match.url_name == 'user_management' or request.resolver_match.url_name == 'user_edit' %}active{% endif %}">
+                        <div class="modern-sidebar-item-icon">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <span>Пользователи</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </nav>
+            
+            <!-- Footer -->
+            <div class="modern-sidebar-footer">
+                <a href="{% url 'accounts:profile' %}" class="modern-sidebar-item">
+                    <div class="modern-sidebar-item-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <span>Настройки</span>
+                </a>
+                {% if user.profile.role == 'admin' and user.is_staff %}
+                <a href="/admin/" target="_blank" class="modern-sidebar-item">
+                    <div class="modern-sidebar-item-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <span>Django Admin</span>
+                </a>
+                {% endif %}
+            </div>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="modern-main">
+            <!-- Topbar -->
+            <header class="modern-topbar">
+                <!-- Search -->
+                <div class="modern-topbar-search">
+                    <div class="modern-search-wrapper">
+                        <i class="fas fa-search modern-search-icon"></i>
+                        <input type="text" class="modern-search-input" placeholder="Поиск документов..." id="globalSearch">
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="modern-topbar-actions">
+                    <!-- Create Button -->
+                    {% user_can_create_document user as can_create %}
+                    {% if can_create %}
+                    <a href="{% url 'documents:document_create' %}" class="modern-btn modern-btn-primary">
+                        <i class="fas fa-plus"></i>
+                        <span>Создать</span>
+                    </a>
+                    {% endif %}
+                    
+                    <!-- Notifications -->
+                    <div class="modern-topbar-action" id="notificationBell" onclick="toggleNotifications(event)">
+                        <i class="fas fa-bell"></i>
+                        <span class="modern-topbar-notification-badge" id="notificationBadge" style="display: none;"></span>
+                    </div>
+                    
+                    <!-- Notifications Dropdown -->
+                    <div class="notifications-dropdown" id="notificationsDropdown">
+                        <div class="notifications-header">
+                            <h3>Уведомления</h3>
+                            <button onclick="markAllAsRead()" class="notifications-mark-all">
+                                <i class="fas fa-check-double"></i> Все прочитаны
+                            </button>
+                        </div>
+                        <div class="notifications-list" id="notificationsList">
+                            <div class="notifications-loading">
+                                <i class="fas fa-spinner fa-spin"></i> Загрузка...
+                            </div>
+                        </div>
+                        <div class="notifications-footer">
+                            <a href="{% url 'documents:notifications_list' %}">Все уведомления</a>
+                        </div>
+                    </div>
+                    
+                    <!-- User Menu -->
+                    <div class="modern-user-menu" onclick="toggleUserDropdown()">
+                        <div class="modern-user-avatar">
+                            {% if user.profile.avatar %}
+                            <img src="{{ user.profile.avatar.url }}" style="width:100%;height:100%;object-fit:cover;" alt="">
+                            {% else %}
+                            {{ user.get_full_name.0|default:user.username.0|upper }}
+                            {% endif %}
+                        </div>
+                        <div class="modern-user-info">
+                            <div class="modern-user-name">{{ user.get_full_name|default:user.username }}</div>
+                            <div class="modern-user-role">{{ user.profile.get_role_display }}</div>
+                        </div>
+                        <i class="fas fa-chevron-down" style="color: var(--text-tertiary); font-size: 12px;"></i>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Toast Notifications Container -->
+            <div id="toast-container" class="toast-container"></div>
+            
+            <!-- Hidden messages for JavaScript -->
+            {% if messages %}
+            <div id="django-messages" style="display: none;">
+                {% for message in messages %}
+                <div data-message-type="{{ message.tags }}" data-message-text="{{ message|escapejs }}"></div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Page Content -->
+            <div class="modern-content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    {% endif %}
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    {# Chat widget replaced by full-page chat at /chat/ #}
+    
+    <!-- Modern UI Scripts -->
+    <script>
+        // Toast Notification System
+        class ToastManager {
+            constructor() {
+                this.container = document.getElementById('toast-container');
+                this.toasts = [];
+            }
+            
+            show(message, type = 'info', duration = 5000) {
+                const toast = this.createToast(message, type);
+                this.container.appendChild(toast);
+                this.toasts.push(toast);
+                
+                // Trigger animation
+                setTimeout(() => toast.classList.add('show'), 10);
+                
+                // Auto dismiss
+                if (duration > 0) {
+                    const progressBar = toast.querySelector('.toast-progress');
+                    if (progressBar) {
+                        progressBar.style.animation = `toastProgress ${duration}ms linear forwards`;
+                    }
+                    
+                    setTimeout(() => this.dismiss(toast), duration);
+                }
+                
+                return toast;
+            }
+            
+            createToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.style.position = 'relative';
+                
+                // Icon based on type
+                let icon = 'info-circle';
+                if (type === 'success') icon = 'check-circle';
+                else if (type === 'error' || type === 'danger') icon = 'exclamation-circle';
+                else if (type === 'warning') icon = 'exclamation-triangle';
+                
+                toast.innerHTML = `
+                    <div class="toast-icon">
+                        <i class="fas fa-${icon}"></i>
+                    </div>
+                    <div class="toast-content">
+                        <div class="toast-message">${this.escapeHtml(message)}</div>
+                    </div>
+                    <div class="toast-close" onclick="toastManager.dismiss(this.closest('.toast'))">
+                        <i class="fas fa-times"></i>
+                    </div>
+                    <div class="toast-progress"></div>
+                `;
+                
+                return toast;
+            }
+            
+            dismiss(toast) {
+                toast.classList.remove('show');
+                toast.classList.add('hide');
+                
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                    const index = this.toasts.indexOf(toast);
+                    if (index > -1) {
+                        this.toasts.splice(index, 1);
+                    }
+                }, 300);
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+        
+        // Create global toast manager
+        const toastManager = new ToastManager();
+        
+        // Show Django messages as toasts
+        document.addEventListener('DOMContentLoaded', function() {
+            const messagesContainer = document.getElementById('django-messages');
+            if (messagesContainer) {
+                const messages = messagesContainer.querySelectorAll('[data-message-type]');
+                messages.forEach((msg, index) => {
+                    const type = msg.getAttribute('data-message-type') || 'info';
+                    const text = msg.getAttribute('data-message-text') || '';
+                    // Delay each message slightly for stagger effect
+                    setTimeout(() => {
+                        toastManager.show(text, type);
+                    }, index * 150);
+                });
+            }
+        });
+        
+        // Add CSS animation for progress bar
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes toastProgress {
+                from { transform: scaleX(1); }
+                to { transform: scaleX(0); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Global Search
+        document.getElementById('globalSearch')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const searchQuery = this.value;
+                if (searchQuery) {
+                    window.location.href = `{% url 'documents:document_list' %}?search=${encodeURIComponent(searchQuery)}`;
+                }
+            }
+        });
+        
+        // User Dropdown
+        let userDropdownOpen = false;
+        function toggleUserDropdown() {
+            // Simple redirect to profile for now
+            // In the future, can be enhanced with dropdown menu
+            window.location.href = '{% url 'accounts:profile' %}';
+        }
+        
+        // Escape key to close dropdowns
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                userDropdownOpen = false;
+                closeNotifications();
+            }
+        });
+        
+        // Notifications System
+        let notificationsOpen = false;
+        let notificationsData = [];
+        
+        function toggleNotifications(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('notificationsDropdown');
+            notificationsOpen = !notificationsOpen;
+            
+            if (notificationsOpen) {
+                dropdown.classList.add('show');
+                loadNotifications();
+            } else {
+                dropdown.classList.remove('show');
+            }
+        }
+        
+        function closeNotifications() {
+            const dropdown = document.getElementById('notificationsDropdown');
+            dropdown.classList.remove('show');
+            notificationsOpen = false;
+        }
+        
+        async function loadNotifications() {
+            const listEl = document.getElementById('notificationsList');
+            listEl.innerHTML = '<div class="notifications-loading"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>';
+            
+            try {
+                const response = await fetch('{% url "documents:notifications_list" %}');
+                const html = await response.text();
+                
+                // Parse the HTML to extract notifications
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const notifications = doc.querySelectorAll('.notification-item-card');
+                
+                if (notifications.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="notifications-empty">
+                            <i class="fas fa-bell-slash"></i>
+                            <div>Нет уведомлений</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                listEl.innerHTML = '';
+                let count = 0;
+                notifications.forEach((notif, index) => {
+                    if (index >= 10) return; // Limit to 10
+                    
+                    const isUnread = notif.classList.contains('unread');
+                    const message = notif.querySelector('.notification-message')?.textContent || '';
+                    const time = notif.querySelector('.notification-time')?.textContent || '';
+                    const id = notif.dataset.notificationId;
+                    
+                    if (isUnread) count++;
+                    
+                    const item = document.createElement('div');
+                    item.className = `notification-item ${isUnread ? 'unread' : ''}`;
+                    item.onclick = () => markAsRead(id);
+                    item.innerHTML = `
+                        <div class="notification-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-message">${message}</div>
+                            <div class="notification-time">${time}</div>
+                        </div>
+                        ${isUnread ? '<div class="notification-unread-dot"></div>' : ''}
+                    `;
+                    listEl.appendChild(item);
+                });
+                
+                updateNotificationBadge(count);
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+                listEl.innerHTML = `
+                    <div class="notifications-empty">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>Ошибка загрузки</div>
+                    </div>
+                `;
+            }
+        }
+        
+        async function markAsRead(notificationId) {
+            try {
+                const response = await fetch(`/notifications/${notificationId}/read/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    loadNotifications();
+                }
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        }
+        
+        async function markAllAsRead() {
+            try {
+                const response = await fetch('{% url "documents:mark_all_read_new" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    loadNotifications();
+                    toastManager.show('Все уведомления отмечены как прочитанные', 'success');
+                }
+            } catch (error) {
+                console.error('Error marking all as read:', error);
+            }
+        }
+        
+        function updateNotificationBadge(count) {
+            const badge = document.getElementById('notificationBadge');
+            if (count > 0) {
+                badge.textContent = count > 9 ? '9+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        async function updateNotificationCount() {
+            try {
+                const response = await fetch('{% url "documents:notifications_count" %}');
+                const data = await response.json();
+                updateNotificationBadge(data.count);
+            } catch (error) {
+                console.error('Error updating notification count:', error);
+            }
+        }
+        
+        // Close notifications when clicking outside
+        document.addEventListener('click', function(e) {
+            if (notificationsOpen) {
+                const dropdown = document.getElementById('notificationsDropdown');
+                const bell = document.getElementById('notificationBell');
+                if (!dropdown.contains(e.target) && !bell.contains(e.target)) {
+                    closeNotifications();
+                }
+            }
+        });
+        
+        // Update notification count every 60 seconds
+        if (document.getElementById('notificationBell')) {
+            updateNotificationCount();
+            setInterval(updateNotificationCount, 60000);
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

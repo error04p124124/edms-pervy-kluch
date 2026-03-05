@@ -1,0 +1,388 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ document.title }} - Печать</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 14pt;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+            padding: 2cm;
+        }
+        
+        .print-header {
+            text-align: center;
+            margin-bottom: 2cm;
+            border-bottom: 2px solid #000;
+            padding-bottom: 1cm;
+        }
+        
+        .company-name {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 0.5cm;
+        }
+        
+        .document-type {
+            font-size: 12pt;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #666;
+        }
+        
+        .document-title {
+            font-size: 20pt;
+            font-weight: bold;
+            text-align: center;
+            margin: 1.5cm 0;
+            text-transform: uppercase;
+        }
+        
+        .document-number {
+            text-align: right;
+            margin-bottom: 1cm;
+            font-size: 12pt;
+        }
+        
+        .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5cm;
+        }
+        
+        .metadata-table td {
+            padding: 0.3cm;
+            border: 1px solid #000;
+        }
+        
+        .metadata-table td:first-child {
+            font-weight: bold;
+            width: 30%;
+            background: #f0f0f0;
+        }
+        
+        .document-content {
+            text-align: justify;
+            margin-bottom: 2cm;
+            min-height: 10cm;
+        }
+        
+        .document-content p {
+            margin-bottom: 0.5cm;
+            text-indent: 1.5cm;
+        }
+        
+        .signatures-section {
+            margin-top: 3cm;
+            page-break-inside: avoid;
+        }
+        
+        .signatures-title {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 1cm;
+            border-bottom: 1px solid #000;
+            padding-bottom: 0.3cm;
+        }
+        
+        .signature-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.5cm;
+            page-break-inside: avoid;
+        }
+        
+        .signature-role {
+            width: 40%;
+        }
+        
+        .signature-name {
+            width: 45%;
+            border-bottom: 1px solid #000;
+            text-align: center;
+            padding-top: 1cm;
+        }
+        
+        .signature-date {
+            margin-top: 0.3cm;
+            font-size: 11pt;
+            color: #666;
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 1cm;
+            left: 2cm;
+            right: 2cm;
+            text-align: center;
+            font-size: 10pt;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 0.5cm;
+        }
+        
+        .print-buttons {
+            position: fixed;
+            top: 1cm;
+            right: 1cm;
+            display: flex;
+            gap: 0.5cm;
+            z-index: 1000;
+        }
+        
+        .print-btn {
+            padding: 0.5cm 1cm;
+            border: none;
+            border-radius: 0.3cm;
+            font-size: 11pt;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        
+        .print-btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .print-btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .print-btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .print-btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.2cm 0.5cm;
+            border-radius: 0.2cm;
+            font-size: 10pt;
+            font-weight: bold;
+            margin-left: 0.5cm;
+        }
+        
+        .status-draft {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .status-approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .qr-code {
+            position: absolute;
+            top: 2cm;
+            right: 2cm;
+            width: 3cm;
+            height: 3cm;
+            border: 2px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8pt;
+            color: #999;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .print-buttons {
+                display: none !important;
+            }
+            
+            .footer {
+                position: fixed;
+                bottom: 0;
+            }
+            
+            @page {
+                size: A4;
+                margin: 2cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Print Buttons (hidden on print) -->
+    <div class="print-buttons">
+        <button onclick="window.print()" class="print-btn print-btn-primary">
+            <i class="fas fa-print"></i> Печать
+        </button>
+        <button onclick="window.close()" class="print-btn print-btn-secondary">
+            <i class="fas fa-times"></i> Закрыть
+        </button>
+    </div>
+    
+    <!-- QR Code Placeholder -->
+    <div class="qr-code">
+        QR-код
+    </div>
+    
+    <!-- Document Header -->
+    <div class="print-header">
+        <div class="company-name">ООО "ПЕРВЫЙ КЛЮЧ"</div>
+        <div class="document-type">
+            {% if document.template %}
+                {{ document.template.get_type_display }}
+            {% else %}
+                Документ
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Document Title -->
+    <h1 class="document-title">{{ document.title }}</h1>
+    
+    <!-- Document Number and Date -->
+    <div class="document-number">
+        № {{ document.document_number }} от {{ document.created_at|date:"d.m.Y" }}
+        <span class="status-badge status-{{ document.status }}">
+            {{ document.get_status_display }}
+        </span>
+    </div>
+    
+    <!-- Metadata Table -->
+    <table class="metadata-table">
+        <tr>
+            <td>Номер документа:</td>
+            <td>{{ document.document_number }}</td>
+        </tr>
+        <tr>
+            <td>Дата создания:</td>
+            <td>{{ document.created_at|date:"d.m.Y H:i" }}</td>
+        </tr>
+        <tr>
+            <td>Создал:</td>
+            <td>{{ document.created_by.get_full_name|default:document.created_by.username }}</td>
+        </tr>
+        <tr>
+            <td>Статус:</td>
+            <td>{{ document.get_status_display }}</td>
+        </tr>
+        {% if document.template %}
+        <tr>
+            <td>Тип документа:</td>
+            <td>{{ document.template.get_type_display }}</td>
+        </tr>
+        {% endif %}
+        {% if document.is_signed %}
+        <tr>
+            <td>Электронная подпись:</td>
+            <td>
+                Подписан {{ document.signed_at|date:"d.m.Y в H:i" }}
+                <br>
+                Подписал: {{ document.signed_by.get_full_name|default:document.signed_by.username }}
+            </td>
+        </tr>
+        {% endif %}
+        {% if document.deadline %}
+        <tr>
+            <td>Срок исполнения:</td>
+            <td>{{ document.deadline|date:"d.m.Y" }}</td>
+        </tr>
+        {% endif %}
+        {% if document.version and document.version > 1 %}
+        <tr>
+            <td>Версия:</td>
+            <td>{{ document.version }}</td>
+        </tr>
+        {% endif %}
+    </table>
+    
+    <!-- Document Content -->
+    <div class="document-content">
+        {% if document.content %}
+            {{ document.content|linebreaks }}
+        {% else %}
+            <p><em>Содержимое документа не указано</em></p>
+        {% endif %}
+    </div>
+    
+    <!-- Signatures Section -->
+    {% if document.is_signed or document.status == 'approved' %}
+    <div class="signatures-section">
+        <div class="signatures-title">Подписи и согласования</div>
+        
+        {% if document.created_by %}
+        <div class="signature-line">
+            <div class="signature-role">
+                Создал документ<br>
+                <small>{{ document.created_by.employee.position|default:"Сотрудник" }}</small>
+            </div>
+            <div class="signature-name">
+                {{ document.created_by.get_full_name|default:document.created_by.username }}
+                <div class="signature-date">{{ document.created_at|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if document.approved_by %}
+        <div class="signature-line">
+            <div class="signature-role">
+                Утвердил<br>
+                <small>{{ document.approved_by.employee.position|default:"Руководитель" }}</small>
+            </div>
+            <div class="signature-name">
+                {{ document.approved_by.get_full_name|default:document.approved_by.username }}
+                <div class="signature-date">{{ document.approved_at|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if document.is_signed %}
+        <div class="signature-line">
+            <div class="signature-role">
+                Электронная подпись<br>
+                <small>{{ document.signed_by.employee.position|default:"Подписант" }}</small>
+            </div>
+            <div class="signature-name">
+                {{ document.signed_by.get_full_name|default:document.signed_by.username }}
+                <div class="signature-date">{{ document.signed_at|date:"d.m.Y в H:i:s" }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Footer -->
+    <div class="footer">
+        ООО "ПЕРВЫЙ КЛЮЧ" | ИНН 7700000000 | КПП 770001001
+        <br>
+        Адрес: г. Москва, ул. Примерная, д. 1 | Тел: +7 (495) 000-00-00
+        <br>
+        <small>Документ создан в системе электронного документооборота | {{ document.created_at|date:"d.m.Y H:i" }}</small>
+    </div>
+    
+    <script>
+        // Auto-print on load (optional)
+        // window.onload = function() { window.print(); };
+    </script>
+</body>
+</html>

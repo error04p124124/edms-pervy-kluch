@@ -1,0 +1,300 @@
+{% extends 'base_modern.html' %}
+{% load static %}
+
+{% block title %}Создать документ из шаблона - ЭДО{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gen-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    
+    .gen-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .placeholder-field {
+        margin-bottom: 1.25rem;
+    }
+    
+    .placeholder-field label {
+        display: block;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.4rem;
+        font-size: 0.95rem;
+    }
+    
+    .placeholder-field .var-tag {
+        display: inline-block;
+        background: #ede9fe;
+        color: #7c3aed;
+        border-radius: 4px;
+        padding: 1px 6px;
+        font-size: 0.75rem;
+        font-family: monospace;
+        margin-left: 6px;
+    }
+    
+    .placeholder-field input,
+    .placeholder-field textarea,
+    .placeholder-field select {
+        width: 100%;
+        padding: 0.65rem 0.9rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        background: #f9fafb;
+        transition: border-color 0.2s;
+    }
+    
+    .placeholder-field input:focus,
+    .placeholder-field textarea:focus {
+        outline: none;
+        border-color: #7c3aed;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+    }
+    
+    .no-placeholders-msg {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        color: #166534;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-sidebar-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .btn-create {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 0.8rem 2rem;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: opacity 0.2s;
+        text-decoration: none;
+    }
+    
+    .btn-create:hover { opacity: 0.9; color: white; }
+    
+    .btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+        border: none;
+        padding: 0.8rem 1.5rem;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background 0.2s;
+    }
+    
+    .btn-cancel:hover { background: #e5e7eb; color: #374151; }
+    
+    .required-star { color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+
+    <!-- Header -->
+    <div class="gen-header">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; flex-shrink: 0;">
+                📄
+            </div>
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0 0 0.25rem 0;">{{ template.name }}</h1>
+                <p style="margin: 0; opacity: 0.9;">{{ template.get_type_display }} · {{ template.get_file_format_display }}{% if template.description %} · {{ template.description }}{% endif %}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Левая колонка: форма -->
+        <div class="col-lg-8">
+            <form method="post">
+                {% csrf_token %}
+                
+                <!-- Основные поля -->
+                <div class="gen-card">
+                    <h3 class="section-title">📋 Основные параметры</h3>
+                    
+                    <div class="placeholder-field">
+                        <label for="doc_title">Название документа <span class="required-star">*</span></label>
+                        <input type="text" id="doc_title" name="doc_title" 
+                               value="{{ template.name }}" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="placeholder-field">
+                                <label for="assigned_to">Ответственный</label>
+                                <select id="assigned_to" name="assigned_to">
+                                    <option value="">— Не назначен —</option>
+                                    {% for u in clerks %}
+                                        <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="placeholder-field">
+                                <label for="deadline">Срок исполнения</label>
+                                <input type="date" id="deadline" name="deadline" value="{{ default_deadline }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Плейсхолдеры шаблона -->
+                {% if template.placeholders %}
+                <div class="gen-card">
+                    <h3 class="section-title">🏷️ Данные для шаблона</h3>
+                    <p style="color: #6b7280; margin-bottom: 1.25rem; font-size: 0.9rem;">
+                        Заполните поля ниже — они будут подставлены в документ вместо соответствующих переменных.
+                    </p>
+                    
+                    <div class="row">
+                        {% for ph in template.placeholders %}
+                        <div class="col-md-{% if ph.type == 'textarea' %}12{% else %}6{% endif %}">
+                            <div class="placeholder-field">
+                                <label for="ph_{{ ph.name }}">
+                                    {{ ph.label }}
+                                    {% if ph.required %}<span class="required-star">*</span>{% endif %}
+                                    <span class="var-tag">{{"{{"}}{{ ph.name }}{{"}}"}}</span>
+                                </label>
+                                
+                                {% if ph.type == 'textarea' %}
+                                    <textarea id="ph_{{ ph.name }}" name="placeholder_{{ ph.name }}" 
+                                              rows="4"{% if ph.required %} required{% endif %}></textarea>
+                                {% elif ph.type == 'date' %}
+                                    <input type="date" id="ph_{{ ph.name }}" name="placeholder_{{ ph.name }}"
+                                           {% if ph.required %} required{% endif %}>
+                                {% elif ph.type == 'number' %}
+                                    <input type="number" id="ph_{{ ph.name }}" name="placeholder_{{ ph.name }}"
+                                           {% if ph.required %} required{% endif %}>
+                                {% elif ph.type == 'email' %}
+                                    <input type="email" id="ph_{{ ph.name }}" name="placeholder_{{ ph.name }}"
+                                           placeholder="example@mail.ru" {% if ph.required %} required{% endif %}>
+                                {% elif ph.type == 'tel' %}
+                                    <input type="tel" id="ph_{{ ph.name }}" name="placeholder_{{ ph.name }}"
+                                           placeholder="+7 (___) ___-__-__" {% if ph.required %} required{% endif %}>
+                                {% else %}
+                                    <input type="text" id="ph_{{ ph.name }}" name="placeholder_{{ ph.name }}"
+                                           {% if ph.required %} required{% endif %}>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="gen-card">
+                    <h3 class="section-title">📝 Содержимое документа</h3>
+                    <div class="no-placeholders-msg">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Этот шаблон не содержит настраиваемых плейсхолдеров. Документ будет создан с автоматически сгенерированным содержимым.
+                    </div>
+                    <div class="placeholder-field">
+                        <label for="doc_content">Дополнительный текст (необязательно)</label>
+                        <textarea id="doc_content" name="content" rows="5" 
+                                  placeholder="Введите дополнительный текст или оставьте пустым для автозаполнения..."></textarea>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Кнопки -->
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button type="submit" class="btn-create">
+                        <i class="fas fa-magic"></i>
+                        Создать документ
+                    </button>
+                    <a href="{% url 'documents:template_list' %}" class="btn-cancel">
+                        <i class="fas fa-times"></i>
+                        Отмена
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Правая колонка: информация -->
+        <div class="col-lg-4">
+            <div class="info-sidebar-card">
+                <h5 style="font-weight: 700; margin-bottom: 1rem;">📋 Шаблон</h5>
+                <p style="margin: 0 0 0.5rem;"><strong>Тип:</strong> {{ template.get_type_display }}</p>
+                <p style="margin: 0 0 0.5rem;"><strong>Формат:</strong> {{ template.get_file_format_display }}</p>
+                {% if template.description %}
+                <p style="margin: 0 0 0.5rem;"><strong>Описание:</strong> {{ template.description }}</p>
+                {% endif %}
+                
+                {% if template.placeholders %}
+                <hr style="border-color: #e5e7eb;">
+                <h6 style="font-weight: 600; margin-bottom: 0.75rem;">🏷️ Переменные шаблона:</h6>
+                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.9rem;">
+                    {% for ph in template.placeholders %}
+                    <li style="margin-bottom: 0.25rem;">
+                        <code style="background: #ede9fe; color: #7c3aed; padding: 1px 5px; border-radius: 3px;">{{"{{"}}{{ ph.name }}{{"}}"}}</code>
+                        — {{ ph.label }}{% if ph.required %} <span style="color: #ef4444;">*</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            
+            <div class="info-sidebar-card">
+                <h6 style="font-weight: 600; margin-bottom: 0.75rem;">ℹ️ Что произойдет:</h6>
+                <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.9rem; color: #374151;">
+                    {% if template.placeholders %}
+                    <li style="margin-bottom: 0.4rem;">Ваши данные подставятся в шаблон</li>
+                    {% else %}
+                    <li style="margin-bottom: 0.4rem;">Поля заполнятся автоматически</li>
+                    {% endif %}
+                    <li style="margin-bottom: 0.4rem;">Документ сохранится в системе</li>
+                    <li style="margin-bottom: 0.4rem;">Файл будет готов к скачиванию</li>
+                    <li>Документ перейдет на согласование</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

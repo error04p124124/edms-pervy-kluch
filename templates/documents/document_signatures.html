@@ -1,0 +1,453 @@
+{% extends 'base_modern.html' %}
+{% load static %}
+
+{% block title %}Электронные подписи - {{ document.title }} - ЭДО{% endblock %}
+
+{% block extra_css %}
+<style>
+    .signatures-header {
+        margin-bottom: 2rem;
+    }
+    
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #3b82f6;
+        text-decoration: none;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+        transition: color 0.2s;
+    }
+    
+    .back-link:hover {
+        color: #2563eb;
+    }
+    
+    .document-info {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+    
+    .document-info h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .document-info p {
+        margin: 0.25rem 0;
+        opacity: 0.95;
+    }
+    
+    .document-signed-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    .sign-action-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 2px dashed #d1d5db;
+    }
+    
+    .sign-action-content {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    
+    .sign-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        color: #1e40af;
+        flex-shrink: 0;
+    }
+    
+    .sign-action-text {
+        flex: 1;
+    }
+    
+    .sign-action-text h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        color: #111827;
+    }
+    
+    .sign-action-text p {
+        color: #6b7280;
+        margin: 0;
+    }
+    
+    .sign-btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #3b82f6;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .sign-btn:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    .sign-btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .signatures-list {
+        display: grid;
+        gap: 1rem;
+    }
+    
+    .signature-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+        border-left: 4px solid transparent;
+    }
+    
+    .signature-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .signature-card.valid {
+        border-left-color: #10b981;
+    }
+    
+    .signature-card.invalid {
+        border-left-color: #ef4444;
+    }
+    
+    .signature-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+        gap: 1rem;
+    }
+    
+    .signature-signer {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .signature-avatar {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1.25rem;
+    }
+    
+    .signature-signer-info h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem 0;
+        color: #111827;
+    }
+    
+    .signature-signer-info p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+    
+    .signature-status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+    
+    .signature-status-badge.valid {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .signature-status-badge.invalid {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .signature-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .signature-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .signature-detail-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #9ca3af;
+    }
+    
+    .signature-detail-value {
+        color: #374151;
+        font-weight: 500;
+        word-break: break-all;
+    }
+    
+    .signature-hash {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.75rem;
+        color: #4b5563;
+        word-break: break-all;
+    }
+    
+    .signature-hash-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #9ca3af;
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.5rem;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+    
+    .certificate-info {
+        background: #f0f9ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .certificate-info h4 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #1e40af;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .certificate-info p {
+        font-size: 0.813rem;
+        color: #1e40af;
+        margin: 0.25rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="modern-animate-in">
+    <a href="{% url 'documents:document_detail' document.id %}" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+        Вернуться к документу
+    </a>
+    
+    <!-- Document Info Card -->
+    <div class="document-info">
+        <h2>{{ document.title }}</h2>
+        <p>
+            <i class="fas fa-hashtag"></i> {{ document.registry_number|default:"Б/Н" }} &nbsp;|&nbsp;
+            <i class="fas fa-calendar"></i> {{ document.created_at|date:"d.m.Y" }}
+        </p>
+        <p>
+            <i class="fas fa-info-circle"></i> Статус: {{ document.get_status_display }}
+        </p>
+        {% if document.is_signed %}
+        <div class="document-signed-badge">
+            <i class="fas fa-check-circle"></i>
+            Документ подписан {{ document.signed_at|date:"d.m.Y в H:i" }}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sign Action (if not signed and user can sign) -->
+    {% if not document.is_signed and document.status == 'approved' %}
+    <div class="sign-action-card">
+        <div class="sign-action-content">
+            <div class="sign-icon">
+                <i class="fas fa-signature"></i>
+            </div>
+            <div class="sign-action-text">
+                <h3>Подписать документ электронной подписью</h3>
+                <p>Документ утвержден и готов к подписанию. После подписания документ будет защищен от изменений.</p>
+            </div>
+            <form method="post" action="{% url 'documents:sign_document' document.id %}">
+                {% csrf_token %}
+                <button type="submit" class="sign-btn" onclick="return confirm('Подписать документ электронной подписью?')">
+                    <i class="fas fa-pen-fancy"></i>
+                    Подписать
+                </button>
+            </form>
+        </div>
+    </div>
+    {% elif document.status != 'approved' %}
+    <div class="sign-action-card">
+        <div class="sign-action-content">
+            <div class="sign-icon" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="sign-action-text">
+                <h3>Документ не готов к подписанию</h3>
+                <p>Документ должен быть утвержден перед подписанием. Текущий статус: <strong>{{ document.get_status_display }}</strong></p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Signatures List -->
+    {% if signatures %}
+    <h2 class="modern-section-title" style="margin-bottom: 1.5rem;">
+        <i class="fas fa-file-signature"></i>
+        Электронные подписи ({{ signatures|length }})
+    </h2>
+    
+    <div class="signatures-list">
+        {% for signature in signatures %}
+        <div class="signature-card {% if signature.is_valid %}valid{% else %}invalid{% endif %}">
+            <div class="signature-header">
+                <div class="signature-signer">
+                    <div class="signature-avatar">
+                        {{ signature.signer.get_full_name.0|default:signature.signer.username.0|upper }}
+                    </div>
+                    <div class="signature-signer-info">
+                        <h3>{{ signature.signer.get_full_name|default:signature.signer.username }}</h3>
+                        <p>{{ signature.signer.employee.position|default:"Сотрудник" }}</p>
+                    </div>
+                </div>
+                <span class="signature-status-badge {% if signature.is_valid %}valid{% else %}invalid{% endif %}">
+                    {% if signature.is_valid %}
+                        <i class="fas fa-check-circle"></i> Действительна
+                    {% else %}
+                        <i class="fas fa-times-circle"></i> Недействительна
+                    {% endif %}
+                </span>
+            </div>
+            
+            <div class="signature-details">
+                <div class="signature-detail">
+                    <span class="signature-detail-label">Дата и время</span>
+                    <span class="signature-detail-value">{{ signature.signed_at|date:"d.m.Y в H:i:s" }}</span>
+                </div>
+                
+                <div class="signature-detail">
+                    <span class="signature-detail-label">IP адрес</span>
+                    <span class="signature-detail-value">{{ signature.ip_address|default:"Не указан" }}</span>
+                </div>
+                
+                <div class="signature-detail">
+                    <span class="signature-detail-label">Версия документа</span>
+                    <span class="signature-detail-value">{{ document.version }}</span>
+                </div>
+            </div>
+            
+            {% if signature.certificate_info %}
+            <div class="certificate-info">
+                <h4><i class="fas fa-certificate"></i> Сертификат</h4>
+                <p>{{ signature.certificate_info }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="signature-hash">
+                <div class="signature-hash-label">Данные подписи (SHA256)</div>
+                {{ signature.signature_data }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-file-signature"></i>
+        <h3>Документ не подписан</h3>
+        <p>
+            {% if document.status == 'approved' %}
+                Документ готов к подписанию электронной подписью
+            {% else %}
+                Документ будет доступен для подписания после утверждения
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Auto-hide flash messages after 5 seconds
+setTimeout(() => {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        alert.style.transition = 'opacity 0.5s';
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 500);
+    });
+}, 5000);
+</script>
+{% endblock %}

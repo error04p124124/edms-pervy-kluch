@@ -1,0 +1,654 @@
+{% extends 'base_modern.html' %}
+{% load static %}
+
+{% block title %}Шаблоны документов - ЭДО{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .page-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin-top: 0.375rem;
+    }
+    
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    .btn-create {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        padding: 0.875rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+    
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        color: white;
+    }
+    
+    .filters-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .filters-row {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 1fr auto;
+        gap: 1rem;
+        align-items: end;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .filter-input, .filter-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        background: #f9fafb;
+    }
+    
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .btn-filter {
+        padding: 0.75rem 1.5rem;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-filter:hover {
+        background: #2563eb;
+    }
+    
+    .templates-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .template-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 1.75rem;
+        transition: all 0.3s;
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .template-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        border-color: #3b82f6;
+    }
+    
+    .template-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .template-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .template-icon.docx {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    }
+    
+    .template-icon.xlsx {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+    
+    
+    .template-icon.pdf {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+    
+    .template-status {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+    
+    .status-badge.active {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-badge.inactive {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .template-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+    }
+    
+    .template-type {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        background: #f3f4f6;
+        color: #374151;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 0.75rem;
+    }
+    
+    .template-description {
+        color: #6b7280;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin-bottom: 1.25rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .template-meta {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid #e5e7eb;
+        flex-wrap: wrap;
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6b7280;
+        font-size: 0.85rem;
+    }
+    
+    .meta-item i {
+        color: #9ca3af;
+    }
+    
+    .template-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn-action {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        text-decoration: none;
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .btn-action.primary {
+        background: #eff6ff;
+        color: #1e40af;
+    }
+    
+    .btn-action.primary:hover {
+        background: #dbeafe;
+        color: #1e3a8a;
+    }
+    
+    .btn-action.success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .btn-action.success:hover {
+        background: #a7f3d0;
+        color: #064e3b;
+    }
+    
+    .btn-action.danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .btn-action.danger:hover {
+        background: #fecaca;
+        color: #7f1d1d;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1.5rem;
+    }
+    
+    .empty-state-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-state-text {
+        color: #6b7280;
+        margin-bottom: 2rem;
+        font-size: 1rem;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .stat-icon.blue {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+    }
+    
+    .stat-icon.green {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #065f46;
+    }
+    
+    .stat-icon.red {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+    }
+    
+    .stat-icon.purple {
+        background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+        color: #6b21a8;
+    }
+    
+    .stat-content {
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1;
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+    
+    @media (max-width: 992px) {
+        .filters-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .templates-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .page-header {
+            flex-direction: column;
+            align-items: start;
+        }
+        
+        .header-actions {
+            width: 100%;
+        }
+        
+        .btn-create {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .stats-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <span>📄</span> Шаблоны документов
+            </h1>
+            <p class="page-subtitle">Управление шаблонами для автоматической генерации документов</p>
+        </div>
+        <div class="header-actions">
+            {% if perms.documents.add_template %}
+            <a href="{% url 'documents:template_create' %}" class="btn-create">
+                <i class="fas fa-plus"></i>
+                Создать шаблон
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ templates.count }}</div>
+                <div class="stat-label">Всего шаблонов</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ templates|length }}</div>
+                <div class="stat-label">Активных</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ types_count }}</div>
+                <div class="stat-label">Типов документов</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon red">
+                <i class="fas fa-file-code"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ formats_count }}</div>
+                <div class="stat-label">Форматов</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="filters-card">
+        <form method="get" action="">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fas fa-search"></i> Поиск
+                    </label>
+                    <input 
+                        type="text" 
+                        name="search" 
+                        class="filter-input" 
+                        placeholder="Поиск по названию или описанию..."
+                        value="{{ request.GET.search }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fas fa-file-alt"></i> Тип
+                    </label>
+                    <select name="type" class="filter-select">
+                        <option value="">Все типы</option>
+                        <option value="contract">Договор</option>
+                        <option value="order">Приказ</option>
+                        <option value="act">Акт</option>
+                        <option value="invoice">Счет</option>
+                        <option value="report">Отчет</option>
+                        <option value="other">Другое</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fas fa-file-code"></i> Формат
+                    </label>
+                    <select name="format" class="filter-select">
+                        <option value="">Все форматы</option>
+                        <option value="docx">Word (.docx)</option>
+                        <option value="xlsx">Excel (.xlsx)</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-filter">
+                    <i class="fas fa-filter"></i>
+                    Фильтр
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    {% if templates %}
+    <div class="templates-grid">
+        {% for template in templates %}
+        <div class="template-card">
+            <div class="template-card-header">
+                <div class="template-icon {{ template.file_format }}">
+                    {% if template.file_format == 'docx' %}
+                        <i class="fas fa-file-word" style="color: white;"></i>
+                    {% elif template.file_format == 'xlsx' %}
+                        <i class="fas fa-file-excel" style="color: white;"></i>
+                    {% elif template.file_format == 'pdf' %}
+                        <i class="fas fa-file-pdf" style="color: white;"></i>
+                    {% else %}
+                        <i class="fas fa-file" style="color: white;"></i>
+                    {% endif %}
+                </div>
+                <div class="template-status">
+                    {% if template.is_active %}
+                        <span class="status-badge active">
+                            <i class="fas fa-check-circle"></i>
+                            Активен
+                        </span>
+                    {% else %}
+                        <span class="status-badge inactive">
+                            <i class="fas fa-times-circle"></i>
+                            Неактивен
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <h3 class="template-title">{{ template.name }}</h3>
+            
+            <span class="template-type">
+                <i class="fas fa-tag"></i>
+                {{ template.get_type_display }}
+            </span>
+            
+            {% if template.description %}
+            <p class="template-description">{{ template.description }}</p>
+            {% else %}
+            <p class="template-description" style="font-style: italic; color: #9ca3af;">Описание не указано</p>
+            {% endif %}
+            
+            <div class="template-meta">
+                <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>{{ template.created_at|date:"d.m.Y" }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-tag"></i>
+                    <span>{{ template.get_type_display }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-file"></i>
+                    <span>{{ template.file_format|upper }}</span>
+                </div>
+            </div>
+            
+            <div class="template-actions">
+                <a href="{% url 'documents:create_from_template' %}?template={{ template.id }}" class="btn-action success">
+                    <i class="fas fa-plus"></i>
+                    Создать документ
+                </a>
+                {% if template.template_file %}
+                <a href="{% url 'documents:download_template' template.pk %}" class="btn-action" style="background:#f3f4f6;color:#374151;border:2px solid #e5e7eb;" title="Скачать файл шаблона">
+                    <i class="fas fa-download"></i>
+                    Скачать шаблон
+                </a>
+                {% endif %}
+                {% if perms.documents.change_template %}
+                <a href="{% url 'documents:template_edit' template.pk %}" class="btn-action primary">
+                    <i class="fas fa-edit"></i>
+                    Редактировать
+                </a>
+                {% endif %}
+                {% if perms.documents.delete_template %}
+                <a href="{% url 'documents:template_delete' template.pk %}" class="btn-action danger" onclick="return confirm('Вы уверены, что хотите удалить этот шаблон?');">
+                    <i class="fas fa-trash"></i>
+                    Удалить
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-file-alt"></i>
+        </div>
+        <h2 class="empty-state-title">Шаблоны не найдены</h2>
+        <p class="empty-state-text">
+            {% if request.GET.search or request.GET.type or request.GET.format %}
+                Попробуйте изменить параметры фильтрации
+            {% else %}
+                Создайте первый шаблон для автоматической генерации документов
+            {% endif %}
+        </p>
+        {% if perms.documents.add_template %}
+        <a href="{% url 'documents:template_create' %}" class="btn-create">
+            <i class="fas fa-plus"></i>
+            Создать первый шаблон
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,588 @@
+﻿{% extends 'base_modern.html' %}
+{% load static %}
+
+{% block title %}Отчёты и аналитика{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Base ──────────────────────────────────────────────── */
+.rp { padding: 0 0 48px; }
+
+/* ── Page header ───────────────────────────────────────── */
+.rp-header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+    border-radius: 20px; padding: 28px 32px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px; color: #fff;
+}
+.rp-header h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; color: #fff; display:flex; align-items:center; gap:10px; }
+.rp-header p  { margin: 0; color: rgba(255,255,255,.62); font-size: 13px; }
+.rp-print-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+    color: #fff; border-radius: 12px; padding: 10px 20px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: background .2s; white-space: nowrap;
+}
+.rp-print-btn:hover { background: rgba(255,255,255,.28); }
+
+/* ── Period picker ─────────────────────────────────────── */
+.period-bar {
+    background: #fff; border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;
+    border: 1.5px solid #e5e7eb; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.period-bar-label { font-size: 13px; font-weight: 600; color: #374151; white-space: nowrap; }
+.period-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.period-btn {
+    padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #e5e7eb; background: #f9fafb; color: #374151;
+    cursor: pointer; text-decoration: none; transition: all .15s;
+}
+.period-btn:hover  { border-color: #6366f1; color: #4338ca; background: #eef2ff; }
+.period-btn.active { background: linear-gradient(135deg,#6366f1,#4338ca); color: #fff; border-color: transparent; }
+.period-sep { width: 1px; height: 28px; background: #e5e7eb; flex-shrink: 0; }
+.period-custom { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.period-custom label { font-size: 13px; color: #6b7280; font-weight: 500; }
+.period-input {
+    padding: 6px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px;
+    background: #f9fafb; color: #111827; transition: border-color .2s;
+}
+.period-input:focus { outline: none; border-color: #6366f1; background: #fff; }
+.period-apply {
+    padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    background: #111827; color: #fff; border: none; cursor: pointer; transition: background .2s;
+}
+.period-apply:hover { background: #374151; }
+
+/* ── KPI grid ──────────────────────────────────────────── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+@media(max-width:1100px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+@media(max-width:600px)  { .kpi-grid { grid-template-columns: 1fr; } }
+.kpi-card {
+    background: #fff; border-radius: 16px; border: 1.5px solid #e5e7eb;
+    padding: 22px 20px; display: flex; align-items: flex-start; gap: 16px;
+    transition: box-shadow .2s, transform .2s;
+}
+.kpi-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.07); transform: translateY(-2px); }
+.kpi-icon {
+    width: 52px; height: 52px; border-radius: 14px; display: flex;
+    align-items: center; justify-content: center; font-size: 20px; color: #fff; flex-shrink: 0;
+}
+.ki-indigo { background: linear-gradient(135deg,#6366f1,#4338ca); }
+.ki-blue   { background: linear-gradient(135deg,#0ea5e9,#0284c7); }
+.ki-green  { background: linear-gradient(135deg,#10b981,#059669); }
+.ki-red    { background: linear-gradient(135deg,#f43f5e,#e11d48); }
+.ki-amber  { background: linear-gradient(135deg,#f59e0b,#d97706); }
+.ki-violet { background: linear-gradient(135deg,#8b5cf6,#7c3aed); }
+.ki-teal   { background: linear-gradient(135deg,#14b8a6,#0d9488); }
+.ki-slate  { background: linear-gradient(135deg,#64748b,#475569); }
+.kpi-val   { font-size: 28px; font-weight: 800; color: #111827; line-height: 1.1; }
+.kpi-lbl   { font-size: 12px; color: #6b7280; font-weight: 500; margin-top: 3px; }
+.kpi-sub   { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+/* ── Grids ─────────────────────────────────────────────── */
+.rp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+@media(max-width:900px) { .rp-grid-2 { grid-template-columns: 1fr; } }
+
+/* ── Cards ─────────────────────────────────────────────── */
+.rp-card { background: #fff; border-radius: 16px; border: 1.5px solid #e5e7eb; overflow: hidden; }
+.rp-card-head {
+    padding: 16px 22px; border-bottom: 1px solid #f3f4f6;
+    display: flex; align-items: center; gap: 10px;
+}
+.rp-card-icon {
+    width: 30px; height: 30px; border-radius: 8px; display: flex;
+    align-items: center; justify-content: center; font-size: 13px; color: #fff;
+}
+.rp-card-title { font-size: 14px; font-weight: 700; color: #111827; }
+.rp-card-body  { padding: 18px 22px; }
+.rp-card-body.no-pad { padding: 0; }
+
+/* ── Charts ────────────────────────────────────────────── */
+.chart-h200 { height: 200px; position: relative; }
+.chart-h260 { height: 260px; position: relative; }
+
+/* ── Tables ────────────────────────────────────────────── */
+.rp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.rp-table thead th {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    color: #6b7280; padding: 10px 16px; border-bottom: 2px solid #f3f4f6; text-align: left;
+    background: #fafafa;
+}
+.rp-table tbody tr:hover { background: #f9fafb; }
+.rp-table td { padding: 11px 16px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.rp-table tbody tr:last-child td { border-bottom: none; }
+
+.prog-wrap { height: 5px; background: #f3f4f6; border-radius: 99px; width: 100px; overflow: hidden; }
+.prog-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#6366f1,#4338ca); }
+.prog-fill.green { background: linear-gradient(90deg,#10b981,#059669); }
+.prog-fill.amber { background: linear-gradient(90deg,#f59e0b,#d97706); }
+.prog-fill.red   { background: linear-gradient(90deg,#f43f5e,#e11d48); }
+
+.sp { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:50px; font-size:11.5px; font-weight:600; }
+.sp-gray   { background:#f1f5f9; color:#475569; }
+.sp-yellow { background:#fefce8; color:#ca8a04; }
+.sp-blue   { background:#eff6ff; color:#2563eb; }
+.sp-green  { background:#f0fdf4; color:#16a34a; }
+.sp-red    { background:#fff1f2; color:#e11d48; }
+.sp-indigo { background:#eef2ff; color:#4338ca; }
+
+.rank { display:inline-flex; width:22px; height:22px; border-radius:50%; background:#f3f4f6;
+        align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#6b7280; }
+.rank.r1 { background: linear-gradient(135deg,#f59e0b,#d97706); color:#fff; }
+.rank.r2 { background: linear-gradient(135deg,#94a3b8,#64748b); color:#fff; }
+.rank.r3 { background: linear-gradient(135deg,#cd7c2a,#b45309); color:#fff; }
+
+.wf-gauge-row { display:flex; gap:12px; margin-bottom:14px; }
+.wf-pill { flex:1; text-align:center; padding:14px 8px; border-radius:12px; }
+.wf-pill-val { font-size:22px; font-weight:800; }
+.wf-pill-lbl { font-size:11px; font-weight:600; margin-top:2px; }
+.wf-green { background:#f0fdf4; color:#16a34a; }
+.wf-red   { background:#fff1f2; color:#e11d48; }
+.wf-gray  { background:#f1f5f9; color:#475569; }
+.wf-bar-wrap { height: 8px; border-radius: 99px; background: #f3f4f6; overflow: hidden; display:flex; gap:2px; }
+.wf-bar-seg  { height:100%; border-radius:99px; }
+
+.overdue-head th { background:#fff1f2; color:#9f1239; font-size:11px; font-weight:700;
+                   text-transform:uppercase; letter-spacing:.04em; padding:10px 16px; }
+.overdue-days { display:inline-flex; align-items:center; gap:4px; background:#fff1f2;
+                color:#e11d48; font-weight:700; font-size:12px; padding:2px 10px; border-radius:50px; }
+
+.empty-block { text-align:center; padding:36px 16px; color:#9ca3af; }
+.empty-block i { font-size:32px; margin-bottom:8px; display:block; }
+.empty-block p { font-size:13px; margin:0; }
+
+.section-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: #9ca3af; margin: 28px 0 12px; padding-left: 2px;
+}
+
+/* ── Export buttons ── */
+.rp-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rp-export-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1.5px solid rgba(255,255,255,.35); background: rgba(255,255,255,.12);
+    color: #fff; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer; text-decoration: none; transition: background .2s, border-color .2s; white-space: nowrap;
+}
+.rp-export-btn:hover { background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.6); color: #fff; }
+.rp-export-btn.btn-green  { background: rgba(16,185,129,.25); border-color: rgba(16,185,129,.5); }
+.rp-export-btn.btn-green:hover  { background: rgba(16,185,129,.45); }
+.rp-export-btn.btn-red    { background: rgba(239,68,68,.22); border-color: rgba(239,68,68,.45); }
+.rp-export-btn.btn-red:hover    { background: rgba(239,68,68,.4); }
+.rp-export-btn.btn-blue   { background: rgba(59,130,246,.22); border-color: rgba(59,130,246,.45); }
+.rp-export-btn.btn-blue:hover   { background: rgba(59,130,246,.4); }
+
+@media print {
+    .modern-sidebar, .modern-header, .no-print { display: none !important; }
+    .rp-grid-2 { display: block; }
+    .rp-card { break-inside: avoid; margin-bottom: 20px; border: 1px solid #ccc; }
+    .kpi-grid { display: grid; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rp container-fluid px-4 py-3">
+
+    <!-- ── Header ── -->
+    <div class="rp-header no-print">
+        <div>
+            <h1><i class="fas fa-chart-bar"></i> Отчёты и аналитика</h1>
+            <p>Данные актуальны на {{ today|date:"d.m.Y H:i" }} &nbsp;&middot;&nbsp; Период: <strong style="color:#fff;">{{ period_label }}</strong></p>
+        </div>
+        <div class="rp-header-actions no-print">
+            <a href="{% url 'documents:report_export_excel' %}?{{ request.GET.urlencode }}" class="rp-export-btn btn-green">
+                <i class="fas fa-file-excel"></i> Excel
+            </a>
+            <a href="{% url 'documents:report_export_pdf' %}?{{ request.GET.urlencode }}" class="rp-export-btn btn-red">
+                <i class="fas fa-file-pdf"></i> PDF
+            </a>
+            <a href="{% url 'documents:report_export_docx' %}?{{ request.GET.urlencode }}" class="rp-export-btn btn-blue">
+                <i class="fas fa-file-word"></i> Word
+            </a>
+            <button class="rp-print-btn" onclick="window.print()"><i class="fas fa-print"></i> Распечатать</button>
+        </div>
+    </div>
+
+    <!-- ── Period picker ── -->
+    <div class="period-bar no-print">
+        <span class="period-bar-label"><i class="fas fa-calendar-alt" style="color:#6366f1;margin-right:6px;"></i>Период:</span>
+        <div class="period-presets">
+            <a href="?preset=7"   class="period-btn {% if preset == '7'   %}active{% endif %}">7 дней</a>
+            <a href="?preset=30"  class="period-btn {% if preset == '30'  %}active{% endif %}">30 дней</a>
+            <a href="?preset=90"  class="period-btn {% if preset == '90'  %}active{% endif %}">90 дней</a>
+            <a href="?preset=365" class="period-btn {% if preset == '365' %}active{% endif %}">Год</a>
+        </div>
+        <div class="period-sep"></div>
+        <form method="get" class="period-custom">
+            <label for="pf">С:</label>
+            <input type="date" id="pf" name="date_from" value="{{ date_from }}" class="period-input">
+            <label for="pt">По:</label>
+            <input type="date" id="pt" name="date_to"   value="{{ date_to }}"   class="period-input">
+            <button type="submit" class="period-apply"><i class="fas fa-search" style="margin-right:5px;"></i>Применить</button>
+        </form>
+    </div>
+
+    <!-- ── KPI cards ── -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon ki-indigo"><i class="fas fa-file-alt"></i></div>
+            <div>
+                <div class="kpi-val">{{ total_period }}</div>
+                <div class="kpi-lbl">Документов за период</div>
+                <div class="kpi-sub">Всего в системе: {{ total_all }}</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon ki-green"><i class="fas fa-check-double"></i></div>
+            <div>
+                <div class="kpi-val">{{ approved_period }}</div>
+                <div class="kpi-lbl">Утверждено</div>
+                <div class="kpi-sub">{% if total_period > 0 %}{% widthratio approved_period total_period 100 %}% от периода{% endif %}</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon ki-red"><i class="fas fa-times-circle"></i></div>
+            <div>
+                <div class="kpi-val">{{ rejected_period }}</div>
+                <div class="kpi-lbl">Отклонено</div>
+                <div class="kpi-sub">{% if total_period > 0 %}{% widthratio rejected_period total_period 100 %}% от периода{% endif %}</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon ki-amber"><i class="fas fa-exclamation-triangle"></i></div>
+            <div>
+                <div class="kpi-val">{{ overdue_count }}</div>
+                <div class="kpi-lbl">Просрочено (всего)</div>
+                <div class="kpi-sub">Активных документов</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon ki-blue"><i class="fas fa-play-circle"></i></div>
+            <div>
+                <div class="kpi-val">{{ in_work_period }}</div>
+                <div class="kpi-lbl">В работе</div>
+                <div class="kpi-sub">Не черновик / не архив за период</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon ki-violet"><i class="fas fa-search"></i></div>
+            <div>
+                <div class="kpi-val">{{ in_review_period }}</div>
+                <div class="kpi-lbl">На рассмотрении</div>
+                <div class="kpi-sub">На согласовании / проверке</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon ki-teal"><i class="fas fa-tags"></i></div>
+            <div>
+                <div class="kpi-val">{{ by_type|length }}</div>
+                <div class="kpi-lbl">Типов документов</div>
+                <div class="kpi-sub">Использовано за период</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon ki-slate"><i class="fas fa-stopwatch"></i></div>
+            <div>
+                <div class="kpi-val">{% if avg_days %}{{ avg_days }}{% else %}&mdash;{% endif %}</div>
+                <div class="kpi-lbl">Ср. время утверждения</div>
+                <div class="kpi-sub">Дней на документ</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Dynamics ── -->
+    <div class="section-label">Динамика</div>
+    <div style="margin-bottom:20px;">
+        <div class="rp-card">
+            <div class="rp-card-head">
+                <div class="rp-card-icon ki-indigo"><i class="fas fa-chart-line"></i></div>
+                <span class="rp-card-title">Создание документов — {{ period_unit }}</span>
+            </div>
+            <div class="rp-card-body chart-h200">
+                <canvas id="dynamicsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Status + Type ── -->
+    <div class="section-label">Структура документооборота</div>
+    <div class="rp-grid-2">
+        <div class="rp-card">
+            <div class="rp-card-head">
+                <div class="rp-card-icon ki-indigo"><i class="fas fa-chart-pie"></i></div>
+                <span class="rp-card-title">По статусам</span>
+            </div>
+            <div class="rp-card-body chart-h260">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+
+        <div class="rp-card">
+            <div class="rp-card-head">
+                <div class="rp-card-icon ki-teal"><i class="fas fa-layer-group"></i></div>
+                <span class="rp-card-title">По типам документов</span>
+            </div>
+            <div class="rp-card-body no-pad">
+                <table class="rp-table">
+                    <thead><tr><th>Тип</th><th style="text-align:right;">Кол-во</th><th style="width:120px;">Доля</th></tr></thead>
+                    <tbody>
+                        {% for item in by_type %}
+                        <tr>
+                            <td>
+                                {% with t=item.template__type %}
+                                {% if t == 'order' %}<span class="sp sp-indigo"><i class="fas fa-gavel"></i> Приказ</span>
+                                {% elif t == 'contract' %}<span class="sp sp-blue"><i class="fas fa-handshake"></i> Договор</span>
+                                {% elif t == 'act' %}<span class="sp sp-green"><i class="fas fa-clipboard-check"></i> Акт</span>
+                                {% elif t == 'memo' %}<span class="sp sp-yellow"><i class="fas fa-sticky-note"></i> Служ. записка</span>
+                                {% elif t == 'letter' %}<span class="sp sp-gray"><i class="fas fa-envelope"></i> Письмо</span>
+                                {% elif t == 'report' %}<span class="sp sp-indigo"><i class="fas fa-chart-bar"></i> Отчёт</span>
+                                {% elif t == 'application' %}<span class="sp sp-green"><i class="fas fa-pen"></i> Заявление</span>
+                                {% else %}<span class="sp sp-gray">{{ t|capfirst }}</span>{% endif %}
+                                {% endwith %}
+                            </td>
+                            <td style="text-align:right;font-weight:700;">{{ item.count }}</td>
+                            <td><div class="prog-wrap">{% if total_period > 0 %}<div class="prog-fill" style="width:{% widthratio item.count total_period 100 %}%;"></div>{% endif %}</div></td>
+                        </tr>
+                        {% endfor %}
+                        {% if no_template_count > 0 %}
+                        <tr>
+                            <td><span class="sp sp-gray"><i class="fas fa-file"></i> Без шаблона</span></td>
+                            <td style="text-align:right;font-weight:700;">{{ no_template_count }}</td>
+                            <td><div class="prog-wrap">{% if total_period > 0 %}<div class="prog-fill" style="width:{% widthratio no_template_count total_period 100 %}%;"></div>{% endif %}</div></td>
+                        </tr>
+                        {% endif %}
+                        {% if not by_type and no_template_count == 0 %}
+                        <tr><td colspan="3"><div class="empty-block"><i class="fas fa-inbox"></i><p>Нет данных за период</p></div></td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Status detail ── -->
+    <div style="margin-bottom:20px;">
+        <div class="rp-card">
+            <div class="rp-card-head">
+                <div class="rp-card-icon ki-indigo"><i class="fas fa-table"></i></div>
+                <span class="rp-card-title">Детальная разбивка по статусам</span>
+            </div>
+            <div class="rp-card-body no-pad">
+                <table class="rp-table">
+                    <thead><tr><th>Статус</th><th>Количество</th><th>Доля, %</th><th style="width:160px;">Прогресс</th></tr></thead>
+                    <tbody>
+                        {% for item in by_status %}
+                        {% with s=item.status %}
+                        <tr>
+                            <td>
+                                {% if s == 'draft' %}<span class="sp sp-gray"><i class="fas fa-circle" style="font-size:7px;"></i> Черновик</span>
+                                {% elif s == 'sent_for_approval' %}<span class="sp sp-yellow"><i class="fas fa-circle" style="font-size:7px;"></i> Отправлен на согл.</span>
+                                {% elif s == 'coordination' %}<span class="sp sp-yellow"><i class="fas fa-circle" style="font-size:7px;"></i> Согласование</span>
+                                {% elif s == 'approval' %}<span class="sp sp-blue"><i class="fas fa-circle" style="font-size:7px;"></i> Утверждение</span>
+                                {% elif s == 'approved' %}<span class="sp sp-green"><i class="fas fa-circle" style="font-size:7px;"></i> Утверждён</span>
+                                {% elif s == 'execution' %}<span class="sp sp-blue"><i class="fas fa-circle" style="font-size:7px;"></i> Исполнение</span>
+                                {% elif s == 'rejected' %}<span class="sp sp-red"><i class="fas fa-circle" style="font-size:7px;"></i> Отклонён</span>
+                                {% elif s == 'returned' %}<span class="sp sp-yellow"><i class="fas fa-circle" style="font-size:7px;"></i> Возвращён</span>
+                                {% elif s == 'archived' %}<span class="sp sp-gray"><i class="fas fa-circle" style="font-size:7px;"></i> В архиве</span>
+                                {% else %}<span class="sp sp-gray">{{ s|capfirst }}</span>{% endif %}
+                            </td>
+                            <td><strong>{{ item.count }}</strong></td>
+                            <td style="color:#6b7280;">{% if total_period > 0 %}{% widthratio item.count total_period 100 %}%{% else %}&mdash;{% endif %}</td>
+                            <td><div class="prog-wrap" style="width:140px;">{% if total_period > 0 %}<div class="prog-fill {% if s == 'approved' %}green{% elif s == 'rejected' %}red{% endif %}" style="width:{% widthratio item.count total_period 100 %}%;"></div>{% endif %}</div></td>
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr><td colspan="4"><div class="empty-block"><i class="fas fa-inbox"></i><p>Нет данных за период</p></div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Workflow + Overdue ── -->
+    <div class="section-label">Согласование и контроль</div>
+    <div class="rp-grid-2">
+        <div class="rp-card">
+            <div class="rp-card-head">
+                <div class="rp-card-icon ki-blue"><i class="fas fa-project-diagram"></i></div>
+                <span class="rp-card-title">Статус согласований</span>
+            </div>
+            <div class="rp-card-body">
+                <div class="wf-gauge-row">
+                    <div class="wf-pill wf-green"><div class="wf-pill-val">{{ wf_approved }}</div><div class="wf-pill-lbl">Одобрено</div></div>
+                    <div class="wf-pill wf-red"><div class="wf-pill-val">{{ wf_rejected }}</div><div class="wf-pill-lbl">Отклонено</div></div>
+                    <div class="wf-pill wf-gray"><div class="wf-pill-val">{{ wf_pending }}</div><div class="wf-pill-lbl">Ожидает</div></div>
+                </div>
+                {% if wf_total > 0 %}
+                <div class="wf-bar-wrap">
+                    <div class="wf-bar-seg" style="width:{% widthratio wf_approved wf_total 100 %}%;background:#10b981;"></div>
+                    <div class="wf-bar-seg" style="width:{% widthratio wf_rejected wf_total 100 %}%;background:#f43f5e;"></div>
+                    <div class="wf-bar-seg" style="width:{% widthratio wf_pending wf_total 100 %}%;background:#94a3b8;"></div>
+                </div>
+                <p style="font-size:12px;color:#6b7280;margin-top:8px;margin-bottom:0;">
+                    Всего решений: <strong>{{ wf_total }}</strong>
+                    &nbsp;&middot;&nbsp; Одобрено: <strong style="color:#10b981;">{% if wf_total > 0 %}{% widthratio wf_approved wf_total 100 %}%{% else %}&mdash;{% endif %}</strong>
+                </p>
+                {% else %}
+                <div class="empty-block"><i class="fas fa-clipboard-list"></i><p>Нет данных о согласованиях</p></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="rp-card">
+            <div class="rp-card-head">
+                <div class="rp-card-icon ki-red"><i class="fas fa-exclamation-triangle"></i></div>
+                <span class="rp-card-title">Просроченные документы</span>
+                {% if overdue_count > 0 %}<span style="margin-left:auto;background:#fff1f2;color:#e11d48;font-size:11px;font-weight:700;padding:2px 10px;border-radius:50px;">{{ overdue_count }}</span>{% endif %}
+            </div>
+            <div class="rp-card-body no-pad">
+                {% if overdue_documents %}
+                <table class="rp-table">
+                    <thead class="overdue-head"><tr><th>Рег. №</th><th>Документ</th><th>Срок</th><th>Ответственный</th></tr></thead>
+                    <tbody>
+                        {% for doc in overdue_documents %}
+                        <tr>
+                            <td><a href="{% url 'documents:document_detail' doc.id %}" style="color:#4338ca;font-weight:600;text-decoration:none;">{{ doc.registry_number|default:"Б/Н" }}</a></td>
+                            <td>{{ doc.title|truncatechars:40 }}</td>
+                            <td><span class="overdue-days"><i class="fas fa-clock"></i> {{ doc.deadline|date:"d.m.Y" }}</span></td>
+                            <td>{{ doc.assigned_to.get_full_name|default:"&mdash;" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-block"><i class="fas fa-check-circle" style="color:#10b981;"></i><p>Просроченных документов нет</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Users ── -->
+    <div class="section-label">Активность пользователей</div>
+    <div class="rp-grid-2">
+        <div class="rp-card">
+            <div class="rp-card-head">
+                <div class="rp-card-icon ki-violet"><i class="fas fa-user-edit"></i></div>
+                <span class="rp-card-title">Топ авторов документов</span>
+            </div>
+            <div class="rp-card-body no-pad">
+                {% if by_creator %}
+                <table class="rp-table">
+                    <thead><tr><th>#</th><th>Сотрудник</th><th style="text-align:right;">Создано</th><th style="width:120px;">Доля</th></tr></thead>
+                    <tbody>
+                        {% for item in by_creator %}
+                        <tr>
+                            <td><span class="rank {% if forloop.counter == 1 %}r1{% elif forloop.counter == 2 %}r2{% elif forloop.counter == 3 %}r3{% endif %}">{{ forloop.counter }}</span></td>
+                            <td>{% with fn=item.created_by__first_name ln=item.created_by__last_name un=item.created_by__username %}{% if fn or ln %}{{ fn }} {{ ln }}{% else %}{{ un }}{% endif %}{% endwith %}</td>
+                            <td style="text-align:right;font-weight:700;">{{ item.count }}</td>
+                            <td><div class="prog-wrap">{% if total_period > 0 %}<div class="prog-fill" style="width:{% widthratio item.count total_period 100 %}%;"></div>{% endif %}</div></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<div class="empty-block"><i class="fas fa-users"></i><p>Нет данных за период</p></div>{% endif %}
+            </div>
+        </div>
+
+        <div class="rp-card">
+            <div class="rp-card-head">
+                <div class="rp-card-icon ki-green"><i class="fas fa-user-check"></i></div>
+                <span class="rp-card-title">Топ исполнителей</span>
+            </div>
+            <div class="rp-card-body no-pad">
+                {% if by_assignee %}
+                <table class="rp-table">
+                    <thead><tr><th>#</th><th>Сотрудник</th><th style="text-align:right;">Назначено</th><th style="width:120px;">Доля</th></tr></thead>
+                    <tbody>
+                        {% for item in by_assignee %}
+                        <tr>
+                            <td><span class="rank {% if forloop.counter == 1 %}r1{% elif forloop.counter == 2 %}r2{% elif forloop.counter == 3 %}r3{% endif %}">{{ forloop.counter }}</span></td>
+                            <td>{% with fn=item.assigned_to__first_name ln=item.assigned_to__last_name un=item.assigned_to__username %}{% if fn or ln %}{{ fn }} {{ ln }}{% else %}{{ un }}{% endif %}{% endwith %}</td>
+                            <td style="text-align:right;font-weight:700;">{{ item.count }}</td>
+                            <td><div class="prog-wrap">{% if total_period > 0 %}<div class="prog-fill green" style="width:{% widthratio item.count total_period 100 %}%;"></div>{% endif %}</div></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<div class="empty-block"><i class="fas fa-users"></i><p>Нет данных за период</p></div>{% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function(){
+    // ── Dynamics chart ────────────────────────────────────
+    const dynCtx = document.getElementById('dynamicsChart');
+    if (dynCtx) {
+        const labels = [{% for d in daily_data %}'{{ d.label }}',{% endfor %}];
+        const counts = [{% for d in daily_data %}{{ d.count }},{% endfor %}];
+        new Chart(dynCtx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Документов создано',
+                    data: counts,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99,102,241,.08)',
+                    borderWidth: 2.5,
+                    pointRadius: labels.length <= 14 ? 4 : 2,
+                    pointBackgroundColor: '#6366f1',
+                    tension: 0.35,
+                    fill: true,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, maxRotation: 45, maxTicksLimit: 14 } },
+                    y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, stepSize: 1 } }
+                }
+            }
+        });
+    }
+
+    // ── Status donut ──────────────────────────────────────
+    const stCtx = document.getElementById('statusChart');
+    if (stCtx) {
+        const LABELS = {
+            draft:'Черновик', sent_for_approval:'На согласование', coordination:'Согласование',
+            approval:'Утверждение', approved:'Утверждён', execution:'Исполнение',
+            rejected:'Отклонён', returned:'Возвращён', archived:'Архив'
+        };
+        const COLORS = {
+            draft:'#94a3b8', sent_for_approval:'#f59e0b', coordination:'#f59e0b',
+            approval:'#0ea5e9', approved:'#10b981', execution:'#6366f1',
+            rejected:'#f43f5e', returned:'#f97316', archived:'#6b7280'
+        };
+        const raw = [{% for item in by_status %}{s:'{{ item.status }}',c:{{ item.count }}},{% endfor %}];
+        if (raw.length) {
+            new Chart(stCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: raw.map(r => LABELS[r.s] || r.s),
+                    datasets: [{
+                        data: raw.map(r => r.c),
+                        backgroundColor: raw.map(r => COLORS[r.s] || '#94a3b8'),
+                        borderWidth: 2, borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '62%',
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 11 }, padding: 10, usePointStyle: true } }
+                    }
+                }
+            });
+        }
+    }
+})();
+</script>
+{% endblock %}

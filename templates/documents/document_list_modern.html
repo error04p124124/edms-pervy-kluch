@@ -1,0 +1,400 @@
+{% extends 'base_modern.html' %}
+{% load static permission_tags %}
+
+{% block title %}Документы - ЭДО{% endblock %}
+
+{% block content %}
+<div class="modern-animate-in">
+    <!-- Page Header -->
+    <div class="modern-flex-between" style="margin-bottom: var(--space-6);">
+        <div>
+            <h1 class="modern-page-title">
+                {% if request.GET.status == 'draft' %}
+                    Черновики
+                {% elif request.GET.status == 'in_review' %}
+                    Документы в работе
+                {% elif request.GET.status == 'approved' %}
+                    Утверждённые документы
+                {% elif request.GET.status == 'archived' %}
+                    Архив документов
+                {% else %}
+                    Реестр документов
+                {% endif %}
+            </h1>
+            <p class="modern-page-subtitle">
+                {% if request.GET.status == 'draft' %}
+                    Неопубликованные документы и черновики
+                {% elif request.GET.status == 'in_review' %}
+                    Документы на согласовании и в процессе обработки
+                {% elif request.GET.status == 'approved' %}
+                    Одобренные и утверждённые документы
+                {% elif request.GET.status == 'archived' %}
+                    Архивные документы организации
+                {% else %}
+                    Управление всеми документами организации
+                {% endif %}
+            </p>
+        </div>
+        {% user_can_create_document user as can_create %}
+        {% if can_create %}
+        <a href="{% url 'documents:document_create' %}" class="modern-btn modern-btn-primary modern-btn-lg">
+            <i class="fas fa-plus"></i>
+            <span>Создать документ</span>
+        </a>
+        {% endif %}
+    </div>
+    
+    <!-- Filters Card - Show only on main documents page without status filter -->
+    {% if not request.GET.status %}
+    <div class="modern-card" style="margin-bottom: var(--space-4);">
+        <div class="modern-card-header" style="cursor: pointer;" onclick="toggleFilters()">
+            <div style="display: flex; align-items: center; gap: var(--space-3);">
+                <i class="fas fa-filter" style="color: var(--text-secondary);"></i>
+                <h2 class="modern-card-title" style="margin: 0;">Фильтры</h2>
+            </div>
+            <i class="fas fa-chevron-down" id="filterIcon" style="color: var(--text-tertiary); transition: transform var(--transition-fast);"></i>
+        </div>
+        
+        <div id="filtersContent" style="display: none;">
+            <form method="get" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); padding: var(--space-4) 0;">
+                <!-- Search -->
+                <div>
+                    <label class="modern-label">Поиск</label>
+                    <input type="text" name="search" class="modern-input" placeholder="Название или номер" value="{{ request.GET.search }}">
+                </div>
+                
+                <!-- Status -->
+                <div>
+                    <label class="modern-label">Статус</label>
+                    <select name="status" class="modern-input">
+                        <option value="">Все статусы</option>
+                        <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Черновик</option>
+                        <option value="in_review" {% if request.GET.status == 'in_review' %}selected{% endif %}>На согласовании</option>
+                        <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Утверждён</option>
+                        <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Отклонён</option>
+                        <option value="archived" {% if request.GET.status == 'archived' %}selected{% endif %}>В архиве</option>
+                    </select>
+                </div>
+                
+                <!-- Type -->
+                <div>
+                    <label class="modern-label">Тип</label>
+                    <select name="template_type" class="modern-input">
+                        <option value="">Все типы</option>
+                        <option value="order">Приказ</option>
+                        <option value="contract">Договор</option>
+                        <option value="act">Акт</option>
+                        <option value="memo">Служебная записка</option>
+                        <option value="letter">Письмо</option>
+                        <option value="report">Отчёт</option>
+                    </select>
+                </div>
+                
+                <!-- Date -->
+                <div>
+                    <label class="modern-label">Дата создания</label>
+                    <input type="date" name="created_after" class="modern-input" value="{{ request.GET.created_after }}">
+                </div>
+                
+                <!-- Actions -->
+                <div style="display: flex; align-items: flex-end; gap: var(--space-2);">
+                    <button type="submit" class="modern-btn modern-btn-primary" style="flex: 1;">
+                        <i class="fas fa-search"></i>
+                        Применить
+                    </button>
+                    <a href="{% url 'documents:document_list' %}" class="modern-btn modern-btn-ghost">
+                        <i class="fas fa-times"></i>
+                        Сбросить
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Results Info -->
+    {% if paginator %}
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); padding: 0 var(--space-2);">
+        <div style="color: var(--text-secondary); font-size: var(--text-sm);">
+            Показано {{ page_obj.start_index }}–{{ page_obj.end_index }} из {{ paginator.count }} документов
+        </div>
+        <div></div>
+    </div>
+    {% endif %}
+    
+    <!-- Documents Table -->
+    {% if object_list %}
+    <div class="modern-table-container">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;"></th>
+                    <th>Документ</th>
+                    <th>Статус</th>
+                    <th>Ответственный</th>
+                    <th>Дата создания</th>
+                    <th>Срок исполнения</th>
+                    <th style="width: 100px;">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in object_list %}
+                <tr onclick="location.href='{% url 'documents:document_detail' doc.id %}'" style="cursor: pointer;">
+                    <!-- Icon -->
+                    <td>
+                        <div style="width: 32px; height: 32px; border-radius: var(--radius-md); background-color: {% if doc.status == 'approved' %}var(--success-light){% elif doc.status == 'in_review' %}var(--warning-light){% elif doc.status == 'rejected' %}var(--error-light){% else %}var(--gray-100){% endif %}; display: flex; align-items: center; justify-content: center; color: {% if doc.status == 'approved' %}var(--success){% elif doc.status == 'in_review' %}var(--warning){% elif doc.status == 'rejected' %}var(--error){% else %}var(--gray-500){% endif %};">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                    </td>
+                    
+                    <!-- Document Info -->
+                    <td>
+                        <div>
+                            <div style="font-weight: var(--font-semibold); color: var(--text-primary); margin-bottom: 2px;">
+                                {{ doc.title|truncatewords:8 }}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--space-2);">
+                                {% if doc.registry_number %}
+                                <span style="font-size: var(--text-xs); color: var(--text-tertiary);">№ {{ doc.registry_number }}</span>
+                                {% endif %}
+                                {% if doc.template %}
+                                <span style="font-size: var(--text-xs); color: var(--text-tertiary);">• {{ doc.template.get_type_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    
+                    <!-- Status -->
+                    <td>
+                        {% if doc.status == 'draft' %}
+                        <span class="modern-badge gray">
+                            <i class="fas fa-file"></i> Черновик
+                        </span>
+                        {% elif doc.status == 'in_review' %}
+                        <span class="modern-badge warning">
+                            <i class="fas fa-clock"></i> На согласовании
+                        </span>
+                        {% elif doc.status == 'approved' %}
+                        <span class="modern-badge success">
+                            <i class="fas fa-check"></i> Утверждён
+                        </span>
+                        {% elif doc.status == 'rejected' %}
+                        <span class="modern-badge error">
+                            <i class="fas fa-times"></i> Отклонён
+                        </span>
+                        {% elif doc.status == 'archived' %}
+                        <span class="modern-badge gray">
+                            <i class="fas fa-archive"></i> Архив
+                        </span>
+                        {% endif %}
+                    </td>
+                    
+                    <!-- Assigned To -->
+                    <td>
+                        {% if doc.assigned_to %}
+                        <div style="display: flex; align-items: center; gap: var(--space-2);">
+                            <div class="modern-user-avatar" style="width: 24px; height: 24px; font-size: var(--text-xs);">
+                                {% if doc.assigned_to.profile.avatar %}
+                                <img src="{{ doc.assigned_to.profile.avatar.url }}" style="width:100%;height:100%;object-fit:cover;" alt="">
+                                {% else %}
+                                {{ doc.assigned_to.get_full_name.0|default:doc.assigned_to.username.0|upper }}
+                                {% endif %}
+                            </div>
+                            <span style="font-size: var(--text-sm); color: var(--text-secondary);">
+                                {{ doc.assigned_to.get_full_name|default:doc.assigned_to.username|truncatechars:20 }}
+                            </span>
+                        </div>
+                        {% else %}
+                        <span style="font-size: var(--text-sm); color: var(--text-tertiary);">—</span>
+                        {% endif %}
+                    </td>
+                    
+                    <!-- Created Date -->
+                    <td>
+                        <span style="font-size: var(--text-sm); color: var(--text-secondary);">{{ doc.created_at|date:"d.m.Y" }}</span>
+                    </td>
+                    
+                    <!-- Deadline -->
+                    <td>
+                        {% if doc.deadline %}
+                            {% if doc.is_overdue %}
+                            <span style="font-size: var(--text-sm); color: var(--error); font-weight: var(--font-medium);">
+                                <i class="fas fa-exclamation-circle"></i>
+                                {{ doc.deadline|date:"d.m.Y" }}
+                            </span>
+                            {% else %}
+                            <span style="font-size: var(--text-sm); color: var(--text-secondary);">{{ doc.deadline|date:"d.m.Y" }}</span>
+                            {% endif %}
+                        {% else %}
+                        <span style="font-size: var(--text-sm); color: var(--text-tertiary);">—</span>
+                        {% endif %}
+                    </td>
+                    
+                    <!-- Actions -->
+                    <td onclick="event.stopPropagation();">
+                        <div style="display: flex; gap: var(--space-1);">
+                            <a href="{% url 'documents:document_detail' doc.id %}" class="modern-topbar-action" title="Просмотр" style="width: 32px; height: 32px;">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% user_can_edit_document user doc as can_edit %}
+                            {% if can_edit %}
+                            <a href="{% url 'documents:document_edit' doc.id %}" class="modern-topbar-action" title="Редактировать" style="width: 32px; height: 32px;">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
+        <!-- First Page Button -->
+        {% if page_obj.has_previous %}
+        <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordering %}ordering={{ request.GET.ordering }}&{% endif %}page=1" 
+           class="modern-btn modern-btn-secondary modern-btn-sm" 
+           title="Первая страница">
+            <i class="fas fa-angle-double-left"></i>
+        </a>
+        {% endif %}
+        
+        <!-- Previous Page Button -->
+        {% if page_obj.has_previous %}
+        <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordering %}ordering={{ request.GET.ordering }}&{% endif %}page={{ page_obj.previous_page_number }}" 
+           class="modern-btn modern-btn-secondary modern-btn-sm"
+           title="Предыдущая">
+            <i class="fas fa-angle-left"></i>
+        </a>
+        {% endif %}
+        
+        <!-- Page Numbers -->
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <!-- Current Page -->
+                <span class="modern-btn modern-btn-primary modern-btn-sm" style="pointer-events: none;">
+                    {{ num }}
+                </span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <!-- Pages near current -->
+                <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordering %}ordering={{ request.GET.ordering }}&{% endif %}page={{ num }}" 
+                   class="modern-btn modern-btn-ghost modern-btn-sm">
+                    {{ num }}
+                </a>
+            {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                <!-- First and Last Page Always Shown -->
+                <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordering %}ordering={{ request.GET.ordering }}&{% endif %}page={{ num }}" 
+                   class="modern-btn modern-btn-ghost modern-btn-sm">
+                    {{ num }}
+                </a>
+            {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+                <!-- Ellipsis -->
+                <span style="padding: 0 var(--space-2); color: var(--text-tertiary);">...</span>
+            {% endif %}
+        {% endfor %}
+        
+        <!-- Next Page Button -->
+        {% if page_obj.has_next %}
+        <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordering %}ordering={{ request.GET.ordering }}&{% endif %}page={{ page_obj.next_page_number }}" 
+           class="modern-btn modern-btn-secondary modern-btn-sm"
+           title="Следующая">
+            <i class="fas fa-angle-right"></i>
+        </a>
+        {% endif %}
+        
+        <!-- Last Page Button -->
+        {% if page_obj.has_next %}
+        <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordering %}ordering={{ request.GET.ordering }}&{% endif %}page={{ page_obj.paginator.num_pages }}" 
+           class="modern-btn modern-btn-secondary modern-btn-sm"
+           title="Последняя страница">
+            <i class="fas fa-angle-double-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <!-- Empty State -->
+    <div class="modern-card" style="text-align: center; padding: var(--space-16) var(--space-6);">
+        <div style="margin-bottom: var(--space-6);">
+            <i class="fas fa-inbox" style="font-size: 4rem; color: var(--text-tertiary); opacity: 0.5;"></i>
+        </div>
+        <h2 style="font-size: var(--text-2xl); font-weight: var(--font-semibold); color: var(--text-primary); margin-bottom: var(--space-2);">
+            Документы не найдены
+        </h2>
+        <p style="font-size: var(--text-base); color: var(--text-secondary); margin-bottom: var(--space-6);">
+            {% if request.GET.search or request.GET.status %}
+            Попробуйте изменить параметры фильтрации
+            {% else %}
+            Создайте первый документ, чтобы начать работу
+            {% endif %}
+        </p>
+        {% user_can_create_document user as can_create %}
+        {% if can_create %}
+        <a href="{% url 'documents:document_create' %}" class="modern-btn modern-btn-primary modern-btn-lg">
+            <i class="fas fa-plus"></i>
+            <span>Создать документ</span>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Pagination Styles */
+.modern-btn.modern-btn-sm {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 var(--space-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mobile responsive pagination */
+@media (max-width: 768px) {
+    .pagination-container {
+        overflow-x: auto;
+        padding: var(--space-2) 0;
+    }
+    
+    .modern-btn.modern-btn-sm {
+        min-width: 32px;
+        height: 32px;
+        padding: 0 var(--space-2);
+        font-size: 13px;
+    }
+}
+</style>
+
+<script>
+function toggleFilters() {
+    const content = document.getElementById('filtersContent');
+    const icon = document.getElementById('filterIcon');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        content.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Show filters if any filter is active (except status from sidebar)
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    // Only auto-expand filters if search or other filters are present, not just status
+    if (urlParams.has('search') || urlParams.has('template_type') || urlParams.has('created_after')) {
+        const filtersContent = document.getElementById('filtersContent');
+        const filterIcon = document.getElementById('filterIcon');
+        if (filtersContent && filterIcon) {
+            toggleFilters();
+        }
+    }
+});
+</script>
+
+{% endblock %}

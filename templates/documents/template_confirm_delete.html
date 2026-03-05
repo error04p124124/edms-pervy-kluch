@@ -1,0 +1,151 @@
+{% extends 'base_modern.html' %}
+{% load static %}
+
+{% block title %}Удаление шаблона — ЭДО{% endblock %}
+
+{% block extra_css %}
+<style>
+.delete-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+}
+.delete-card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.10);
+    padding: 2.5rem 2.5rem 2rem;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+}
+.delete-icon-ring {
+    width: 80px; height: 80px;
+    background: var(--error-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+.delete-icon-ring i {
+    font-size: 2rem;
+    color: var(--error);
+}
+.delete-card h2 {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 .5rem;
+}
+.delete-card .subtitle {
+    font-size: .875rem;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+.delete-subject {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+.delete-subject-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: .9375rem;
+    margin-bottom: .25rem;
+}
+.delete-subject-meta {
+    font-size: .8125rem;
+    color: var(--text-secondary);
+}
+.delete-warning {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    background: var(--error-light);
+    color: var(--error-600);
+    border-radius: 10px;
+    padding: .75rem 1rem;
+    font-size: .8125rem;
+    font-weight: 500;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+.delete-actions {
+    display: flex;
+    gap: .75rem;
+    justify-content: center;
+}
+.btn-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .625rem 1.5rem;
+    background: var(--error);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+    text-decoration: none;
+}
+.btn-delete:hover { background: var(--error-700); color: #fff; }
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .625rem 1.5rem;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    font-size: .875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background .2s;
+}
+.btn-cancel:hover { background: var(--border-light); color: var(--text-primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-wrap modern-animate-in">
+    <div class="delete-card">
+        <div class="delete-icon-ring">
+            <i class="fas fa-trash-alt"></i>
+        </div>
+        <h2>Удалить шаблон?</h2>
+        <p class="subtitle">Это действие нельзя будет отменить</p>
+
+        <div class="delete-subject">
+            <div class="delete-subject-name">{{ object.name }}</div>
+            <div class="delete-subject-meta">
+                <i class="fas fa-tag" style="margin-right:.3rem;"></i>{{ object.get_type_display }}
+                &nbsp;&middot;&nbsp;
+                <i class="fas fa-file" style="margin-right:.3rem;"></i>{{ object.get_file_format_display }}
+            </div>
+        </div>
+
+        <div class="delete-warning">
+            <i class="fas fa-exclamation-circle"></i>
+            Все связанные данные шаблона будут безвозвратно удалены
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="delete-actions">
+                <a href="{% url 'documents:template_list' %}" class="btn-cancel">
+                    <i class="fas fa-arrow-left"></i> Отмена
+                </a>
+                <button type="submit" class="btn-delete">
+                    <i class="fas fa-trash-alt"></i> Удалить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

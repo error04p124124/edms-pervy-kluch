@@ -1,0 +1,313 @@
+{% extends 'base_modern.html' %}
+{% load static permission_tags %}
+
+{% block title %}Главная - ЭДО{% endblock %}
+
+{% block content %}
+<div class="modern-animate-in">
+    <!-- Page Header -->
+    <div class="modern-page-header">
+        <h1 class="modern-page-title">Добро пожаловать, {{ user.get_full_name|default:user.username }}!</h1>
+        <p class="modern-page-subtitle">{{ user.profile.get_role_display }}{% if user.profile.department %} • {{ user.profile.department }}{% endif %}</p>
+    </div>
+    
+    <!-- Stats Grid -->
+    <div class="modern-stat-grid">
+        <!-- Total Documents -->
+        <div class="modern-stat-card" onclick="location.href='{% url 'documents:document_list' %}'">
+            <div class="modern-stat-icon blue">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="modern-stat-label">Всего документов</div>
+            <div class="modern-stat-value">{{ total_documents }}</div>
+            <div class="modern-stat-change positive">
+                <i class="fas fa-arrow-up"></i>
+                <span>Смотреть все</span>
+            </div>
+        </div>
+        
+        <!-- In Review -->
+        <div class="modern-stat-card" onclick="location.href='{% url 'documents:document_list' %}?status=in_review'">
+            <div class="modern-stat-icon yellow">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="modern-stat-label">На согласовании</div>
+            <div class="modern-stat-value">{{ in_review }}</div>
+            <div class="modern-stat-change">
+                <span>Требуют внимания</span>
+            </div>
+        </div>
+        
+        <!-- Approved -->
+        <div class="modern-stat-card" onclick="location.href='{% url 'documents:document_list' %}?status=approved'">
+            <div class="modern-stat-icon green">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="modern-stat-label">Утверждено</div>
+            <div class="modern-stat-value">{{ approved }}</div>
+            <div class="modern-stat-change positive">
+                <i class="fas fa-arrow-up"></i>
+                <span>Отличная работа</span>
+            </div>
+        </div>
+        
+        <!-- Overdue -->
+        <div class="modern-stat-card" onclick="location.href='{% url 'documents:document_list' %}?only_overdue=on'">
+            <div class="modern-stat-icon red">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="modern-stat-label">Просрочено</div>
+            <div class="modern-stat-value">{{ overdue }}</div>
+            {% if overdue > 0 %}
+            <div class="modern-stat-change negative">
+                <i class="fas fa-arrow-down"></i>
+                <span>Требуют действий</span>
+            </div>
+            {% else %}
+            <div class="modern-stat-change positive">
+                <i class="fas fa-check"></i>
+                <span>Все в порядке</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="modern-card" style="margin-bottom: var(--space-6);">
+        <div class="modern-card-header">
+            <div>
+                <h2 class="modern-card-title">Быстрые действия</h2>
+                <p class="modern-card-subtitle">Часто используемые операции</p>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4);">
+            <!-- Clerk: full document management -->
+            {% user_can_create_document user as can_create %}
+            {% if can_create %}
+            <a href="{% url 'documents:document_create' %}" class="modern-quick-action">
+                <div class="modern-quick-action-icon" style="background: linear-gradient(135deg, var(--primary-500), var(--accent-blue));">
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="modern-quick-action-title">Создать документ</div>
+                <div class="modern-quick-action-description">Новый документ с нуля</div>
+            </a>
+            {% endif %}
+            
+            {% user_can_manage_templates user as can_manage %}
+            {% if can_manage %}
+            <a href="{% url 'documents:template_list' %}" class="modern-quick-action">
+                <div class="modern-quick-action-icon" style="background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="modern-quick-action-title">Шаблоны</div>
+                <div class="modern-quick-action-description">Управление шаблонами</div>
+            </a>
+            
+            {% endif %}
+            
+            <!-- Manager: approval and statistics -->
+            {% if user.profile.role == 'manager' or user.profile.role == 'admin' %}
+            <a href="{% url 'documents:manager_approvals' %}" class="modern-quick-action">
+                <div class="modern-quick-action-icon" style="background: linear-gradient(135deg, var(--success), #059669);">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="modern-quick-action-title">Согласование</div>
+                <div class="modern-quick-action-description">Документы на утверждение</div>
+            </a>
+            
+
+            {% endif %}
+            
+            <!-- Reports: manager and admin only -->
+            {% if user.profile.role == 'manager' or user.profile.role == 'admin' %}
+            <a href="{% url 'documents:reports' %}" class="modern-quick-action">
+                <div class="modern-quick-action-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="modern-quick-action-title">Отчёты</div>
+                <div class="modern-quick-action-description">Аналитика и отчёты</div>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Recent Documents -->
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <div>
+                <h2 class="modern-card-title">Недавние документы</h2>
+                <p class="modern-card-subtitle">Последние 10 документов в системе</p>
+            </div>
+            <a href="{% url 'documents:document_list' %}" class="modern-btn modern-btn-secondary modern-btn-sm">
+                Смотреть все
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        
+        {% if recent_documents %}
+        <div class="modern-table-container">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Документ</th>
+                        <th>Статус</th>
+                        <th>Ответственный</th>
+                        <th>Дата</th>
+                        <th>Срок</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in recent_documents %}
+                    <tr onclick="location.href='{% url 'documents:document_detail' doc.id %}'">
+                        <td>
+                            <div style="display: flex; align-items: center; gap: var(--space-3);">
+                                <div style="width: 32px; height: 32px; border-radius: var(--radius-md); background-color: var(--primary-100); display: flex; align-items: center; justify-content: center; color: var(--primary-600);">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: var(--font-medium); color: var(--text-primary);">{{ doc.title|truncatewords:6 }}</div>
+                                    {% if doc.registry_number %}
+                                    <div style="font-size: var(--text-xs); color: var(--text-tertiary);">№ {{ doc.registry_number }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if doc.status == 'draft' %}
+                            <span class="modern-badge gray">
+                                <i class="fas fa-file"></i> Черновик
+                            </span>
+                            {% elif doc.status == 'in_review' %}
+                            <span class="modern-badge warning">
+                                <i class="fas fa-clock"></i> На согласовании
+                            </span>
+                            {% elif doc.status == 'approved' %}
+                            <span class="modern-badge success">
+                                <i class="fas fa-check"></i> Утверждён
+                            </span>
+                            {% elif doc.status == 'rejected' %}
+                            <span class="modern-badge error">
+                 <i class="fas fa-times"></i> Отклонён
+                            </span>
+                            {% elif doc.status == 'archived' %}
+                            <span class="modern-badge gray">
+                                <i class="fas fa-archive"></i> Архив
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: var(--space-2);">
+                                <div class="modern-user-avatar" style="width: 24px; height: 24px; font-size: var(--text-xs);">
+                                    {% if doc.assigned_to %}
+                                    {% if doc.assigned_to.profile.avatar %}
+                                    <img src="{{ doc.assigned_to.profile.avatar.url }}" style="width:100%;height:100%;object-fit:cover;" alt="">
+                                    {% else %}
+                                    {{ doc.assigned_to.get_full_name.0|default:doc.assigned_to.username.0|upper }}
+                                    {% endif %}
+                                    {% else %}
+                                    ?
+                                    {% endif %}
+                                </div>
+                                <span style="font-size: var(--text-sm); color: var(--text-secondary);">
+                                    {% if doc.assigned_to %}
+                                    {{ doc.assigned_to.get_full_name|default:doc.assigned_to.username }}
+                                    {% else %}
+                                    Не назначен
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="font-size: var(--text-sm); color: var(--text-secondary);">{{ doc.created_at|date:"d.m.Y" }}</span>
+                        </td>
+                        <td>
+                            {% if doc.deadline %}
+                                {% if doc.is_overdue %}
+                                <span style="font-size: var(--text-sm); color: var(--error); font-weight: var(--font-medium);">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ doc.deadline|date:"d.m.Y" }}
+                                </span>
+                                {% else %}
+                                <span style="font-size: var(--text-sm); color: var(--text-secondary);">{{ doc.deadline|date:"d.m.Y" }}</span>
+                                {% endif %}
+                            {% else %}
+                            <span style="font-size: var(--text-sm); color: var(--text-tertiary);">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: var(--space-10); text-align: center; color: var(--text-tertiary);">
+            <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: var(--space-4); opacity: 0.5;"></i>
+            <div style="font-size: var(--text-lg); margin-bottom: var(--space-2);">Документов пока нет</div>
+            <div style="font-size: var(--text-sm);">Создайте первый документ, чтобы начать работу</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.modern-quick-action {
+    display: block;
+    padding: var(--space-4);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    background-color: var(--bg-secondary);
+}
+
+.modern-quick-action:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-200);
+}
+
+.modern-quick-action-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-xl);
+    color: white;
+    margin-bottom: var(--space-3);
+}
+
+.modern-quick-action-title {
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+}
+
+.modern-quick-action-description {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add animation to stats on load
+document.addEventListener('DOMContentLoaded', function() {
+    const statCards = document.querySelectorAll('.modern-stat-card');
+    statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

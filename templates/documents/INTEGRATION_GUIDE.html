@@ -1,0 +1,439 @@
+<!-- 
+    ИНСТРУКЦИЯ ПО ИНТЕГРАЦИИ НОВЫХ ФУНКЦИЙ В document_detail.html
+    
+    Этот файл содержит готовые HTML секции для добавления в шаблон document_detail.html
+    Добавьте эти блоки в конец шаблона, перед закрывающим тегом {% endblock %}
+-->
+
+<!-- 1. Подключение CSS и JS в начале шаблона (после {% extends %}) -->
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/comments-upload.css' %}">
+<style>
+    .document-tabs {
+        display: flex;
+        gap: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+        margin: 2rem 0 1.5rem 0;
+    }
+    
+    .document-tab {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        background: transparent;
+        color: #6b7280;
+        font-weight: 500;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+    }
+    
+    .document-tab:hover {
+        color: #3b82f6;
+    }
+    
+    .document-tab.active {
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+    }
+    
+    .document-tab-content {
+        display: none;
+    }
+    
+    .document-tab-content.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/comments.js' %}"></script>
+<script src="{% static 'js/file-upload.js' %}"></script>
+{% endblock %}
+
+<!-- 2. Вкладки для навигации (добавить после основной информации о документе) -->
+<div class="document-tabs">
+    <button class="document-tab active" onclick="switchTab('info')">
+        <i class="fas fa-info-circle"></i> Информация
+    </button>
+    <button class="document-tab" onclick="switchTab('comments')">
+        <i class="fas fa-comments"></i> Комментарии <span class="comments-count" id="commentsCount">(0)</span>
+    </button>
+    <button class="document-tab" onclick="switchTab('attachments')">
+        <i class="fas fa-paperclip"></i> Вложения <span class="comments-count" id="attachmentsCount">(0)</span>
+    </button>
+    <button class="document-tab" onclick="switchTab('history')">
+        <i class="fas fa-history"></i> История
+    </button>
+</div>
+
+<!-- 3. Контент вкладки "Информация" (основная информация документа) -->
+<div id="infoTab" class="document-tab-content active">
+    <!-- Здесь остается существующее содержимое документа -->
+    
+    <!-- Дополнительные быстрые действия -->
+    <div class="modern-card" style="margin-top: 2rem;">
+        <div class="modern-card-header">
+            <h2 class="modern-card-title">Быстрые действия</h2>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1rem;">
+            
+            <!-- Export to PDF -->
+            <a href="{% url 'documents:export_document_pdf' document.id %}" class="action-card">
+                <div class="action-card-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <div class="action-card-text">
+                    <h3>Экспорт в PDF</h3>
+                    <p>Скачать документ</p>
+                </div>
+            </a>
+            
+            <!-- Print -->
+            <a href="{% url 'documents:print_document' document.id %}" target="_blank" class="action-card">
+                <div class="action-card-icon" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                    <i class="fas fa-print"></i>
+                </div>
+                <div class="action-card-text">
+                    <h3>Печать</h3>
+                    <p>Открыть форму печати</p>
+                </div>
+            </a>
+            
+            <!-- Versions -->
+            <a href="{% url 'documents:document_versions' document.id %}" class="action-card">
+                <div class="action-card-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                    <i class="fas fa-code-branch"></i>
+                </div>
+                <div class="action-card-text">
+                    <h3>Версии</h3>
+                    <p>Версия {{ document.version }}</p>
+                </div>
+            </a>
+            
+            <!-- Signatures -->
+            <a href="{% url 'documents:document_signatures' document.id %}" class="action-card">
+                <div class="action-card-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <i class="fas fa-signature"></i>
+                </div>
+                <div class="action-card-text">
+                    <h3>Подписи</h3>
+                    <p>{% if document.is_signed %}Подписан{% else %}Не подписан{% endif %}</p>
+                </div>
+            </a>
+            
+            <!-- Archive -->
+            {% if document.status != 'archived' %}
+            <form method="post" action="{% url 'documents:archive_document' document.id %}" style="display: contents;">
+                {% csrf_token %}
+                <button type="submit" class="action-card" onclick="return confirm('Переместить документ в архив?')" style="border: none; width: 100%; text-align: left; cursor: pointer;">
+                    <div class="action-card-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        <i class="fas fa-archive"></i>
+                    </div>
+                    <div class="action-card-text">
+                        <h3>Архивировать</h3>
+                        <p>В архив</p>
+                    </div>
+                </button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'documents:restore_document' document.id %}" style="display: contents;">
+                {% csrf_token %}
+                <button type="submit" class="action-card" onclick="return confirm('Восстановить документ из архива?')" style="border: none; width: 100%; text-align: left; cursor: pointer;">
+                    <div class="action-card-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <i class="fas fa-undo"></i>
+                    </div>
+                    <div class="action-card-text">
+                        <h3>Восстановить</h3>
+                        <p>Из архива</p>
+                    </div>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 4. Вкладка "Комментарии" -->
+<div id="commentsTab" class="document-tab-content">
+    <div class="comments-section" id="commentsSection" data-document-id="{{ document.id }}">
+        <div class="comments-header">
+            <h3 class="comments-title">
+                <i class="fas fa-comments"></i>
+                Комментарии
+                <span class="comments-count" id="commentsBadge">0</span>
+            </h3>
+        </div>
+        
+        <!-- Comments will be loaded here by JavaScript -->
+        <div id="commentsContainer">
+            <div class="comments-loading">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка комментариев...
+            </div>
+        </div>
+        
+        <!-- Comment Form -->
+        <form id="commentForm" class="comment-form">
+            {% csrf_token %}
+            <h4 class="comment-form-title" id="commentFormTitle">Добавить комментарий</h4>
+            <textarea 
+                id="commentText" 
+                class="comment-textarea" 
+                placeholder="Напишите комментарий... Используйте @username для упоминания пользователя"
+                required
+            ></textarea>
+            <div class="comment-form-actions">
+                <button type="submit" class="comment-submit-btn">
+                    <i class="fas fa-paper-plane"></i> Отправить
+                </button>
+                <button type="button" id="cancelCommentBtn" class="comment-cancel-btn">
+                    <i class="fas fa-times"></i> Отмена
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 5. Вкладка "Вложения" -->
+<div id="attachmentsTab" class="document-tab-content">
+    <div class="attachments-section" id="attachmentsSection" data-document-id="{{ document.id }}">
+        <div class="attachments-header">
+            <h3 class="attachments-title">
+                <i class="fas fa-paperclip"></i>
+                Вложения
+            </h3>
+            <p class="attachments-subtitle">Загрузите файлы, связанные с документом (максимум 50 МБ)</p>
+        </div>
+        
+        <!-- Drop Zone -->
+        <div id="dropZone" class="drop-zone">
+            <div class="drop-zone-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <div class="drop-zone-text">Перетащите файлы сюда</div>
+            <div class="drop-zone-hint">или нажмите для выбора файлов</div>
+            <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip,.rar">
+        </div>
+        
+        <!-- Upload Progress -->
+        <div id="uploadProgressContainer" class="upload-progress-container"></div>
+        
+        <!-- Attachments List -->
+        <div id="attachmentsList" class="attachments-list">
+            <div class="attachments-empty">
+                <i class="fas fa-paperclip"></i>
+                <p>Загрузка вложений...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Вкладка "История" -->
+<div id="historyTab" class="document-tab-content">
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <h2 class="modern-card-title">История изменений</h2>
+        </div>
+        
+        <!-- Existing history content or new enhanced history -->
+        <div style="padding: 1rem;">
+            {% if document.history.all %}
+            <div class="timeline">
+                {% for history_item in document.history.all %}
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-header">
+                            <strong>{{ history_item.user.get_full_name|default:history_item.user.username }}</strong>
+                            <span class="timeline-time">{{ history_item.created_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        <div class="timeline-action">{{ history_item.action }}</div>
+                        {% if history_item.comment %}
+                        <div class="timeline-comment">{{ history_item.comment }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-history"></i>
+                <p>История пуста</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 7. JavaScript для переключения вкладок (добавить в конец перед {% endblock %}) -->
+<script>
+function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.document-tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.document-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    const selectedTab = document.getElementById(tabName + 'Tab');
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Add active class to clicked button
+    event.target.closest('.document-tab').classList.add('active');
+    
+    // Update URL hash
+    window.location.hash = tabName;
+}
+
+// Restore tab from URL hash on page load
+window.addEventListener('DOMContentLoaded', function() {
+    const hash = window.location.hash.substring(1);
+    if (hash && ['info', 'comments', 'attachments', 'history'].includes(hash)) {
+        const tabBtn = document.querySelector(`.document-tab[onclick*="${hash}"]`);
+        if (tabBtn) tabBtn.click();
+    }
+});
+
+// Style for action cards
+const actionCardStyle = document.createElement('style');
+actionCardStyle.textContent = `
+    .action-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .action-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .action-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .action-card-text h3 {
+        font-size: 0.938rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.25rem 0;
+    }
+    
+    .action-card-text p {
+        font-size: 0.813rem;
+        color: #6b7280;
+        margin: 0;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e5e7eb;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+        padding-left: 1.5rem;
+    }
+    
+    .timeline-dot {
+        position: absolute;
+        left: -2.4rem;
+        top: 0.25rem;
+        width: 12px;
+        height: 12px;
+        background: #3b82f6;
+        border: 3px solid white;
+        border-radius: 50%;
+        box-shadow: 0 0 0 2px #3b82f6;
+    }
+    
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
+    }
+    
+    .timeline-time {
+        font-size: 0.813rem;
+        color: #6b7280;
+    }
+    
+    .timeline-action {
+        color: #374151;
+        margin-bottom: 0.25rem;
+    }
+    
+    .timeline-comment {
+        background: #f9fafb;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+    }
+`;
+document.head.appendChild(actionCardStyle);
+</script>
+
+<!-- 
+    ДОПОЛНИТЕЛЬНЫЕ ИНСТРУКЦИИ:
+    
+    1. Убедитесь, что в контексте view передаются:
+       - document (объект документа)
+       - csrf_token (для AJAX запросов)
+    
+    2. Проверьте, что все URL patterns настроены в documents/urls.py:
+       - 'documents:export_document_pdf'
+       - 'documents:print_document'
+       - 'documents:document_versions'
+       - 'documents:document_signatures'
+       - 'documents:archive_document'
+       - 'documents:restore_document'
+    
+    3. Убедитесь, что статические файлы собраны:
+       python manage.py collectstatic
+    
+    4. Для работы комментариев и вложений нужны API endpoints:
+       - /documents/<id>/comments/ (GET - получить комментарии)
+       - /documents/<id>/comments/add/ (POST - добавить комментарий)
+       - /comments/<id>/edit/ (POST - редактировать)
+       - /comments/<id>/delete/ (POST - удалить)
+       - /documents/<id>/attachments/ (GET - получить вложения)
+       - /documents/<id>/attachments/upload/ (POST - загрузить)
+       - /attachments/<id>/delete/ (POST - удалить)
+    
+    5. JavaScript файлы автоматически инициализируются при наличии
+       элементов с ID: commentsSection и attachmentsSection
+-->

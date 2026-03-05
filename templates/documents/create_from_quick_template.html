@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Создать из шаблона{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header bg-gradient">
+                    <h4 class="mb-0 text-white">
+                        <i class="fas fa-bolt me-2"></i>
+                        Создать документ из шаблона: {{ template.name }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="title" class="form-label">Название документа *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="description" class="form-label">Описание</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Получатели *</label>
+                            <select class="form-select" name="recipients" multiple size="5" required>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">
+                                    {{ user.get_full_name|default:user.username }} 
+                                    {% if user.profile.department %}({{ user.profile.department }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Удерживайте Ctrl (Cmd на Mac) для выбора нескольких получателей
+                            </small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Предпросмотр содержимого шаблона</label>
+                            <div class="border rounded p-3 bg-light">
+                                <pre class="mb-0">{{ template.content_template|default:"Пустой шаблон" }}</pre>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'documents:quick_templates' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Назад
+                            </a>
+                            <button type="submit" class="btn btn-gradient">
+                                <i class="fas fa-plus me-2"></i>
+                                Создать документ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

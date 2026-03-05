@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Вход в систему - ЭДО{% endblock %}</title>
+    
+    {% load static %}
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <!-- Modern CSS -->
+    <link rel="stylesheet" href="{% static 'css/modern.css' %}">
+    
+    <style>
+        /* Login Page Specific Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 1000px;
+            margin: var(--space-6);
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: var(--radius-2xl);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @media (max-width: 768px) {
+            .login-card {
+                grid-template-columns: 1fr;
+            }
+            
+            .login-branding {
+                display: none !important;
+            }
+        }
+        
+        .login-branding {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: var(--space-10);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-branding::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .login-branding-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-2xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto var(--space-5);
+            backdrop-filter: blur(10px);
+        }
+        
+        .login-branding h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 0 var(--space-3) 0;
+        }
+        
+        .login-branding p {
+            font-size: 16px;
+            opacity: 0.9;
+            margin: 0 0 var(--space-6) 0;
+        }
+        
+        .login-features {
+            display: flex;
+            gap: var(--space-6);
+            justify-content: center;
+        }
+        
+        .login-feature {
+            text-align: center;
+        }
+        
+        .login-feature i {
+            font-size: 32px;
+            margin-bottom: var(--space-2);
+            display: block;
+        }
+        
+        .login-feature-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .login-form-container {
+            padding: var(--space-10);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .login-form-container {
+                padding: var(--space-6);
+            }
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: var(--space-8);
+        }
+        
+        .login-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 var(--space-2) 0;
+        }
+        
+        .login-header p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-5);
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+        
+        .form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .form-group label i {
+            color: var(--primary-500);
+        }
+        
+        .form-group input {
+            height: 48px;
+            padding: 0 var(--space-4);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 4px var(--primary-100);
+        }
+        
+        .form-error {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3);
+            background: var(--error-50);
+            border: 1px solid var(--error-200);
+            border-radius: var(--radius-lg);
+            color: var(--error-700);
+            font-size: 14px;
+        }
+        
+        .form-error i {
+            color: var(--error-500);
+        }
+        
+        .login-submit {
+            height: 52px;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+        }
+        
+        .login-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .login-submit:active {
+            transform: translateY(0);
+        }
+        
+        .login-footer {
+            text-align: center;
+            margin-top: var(--space-6);
+            padding-top: var(--space-6);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .login-footer p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .login-footer a {
+            color: var(--primary-500);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+        
+        .login-footer a:hover {
+            color: var(--primary-600);
+        }
+        
+        .login-copyright {
+            text-align: center;
+            margin-top: var(--space-6);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    {% block content %}
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Left Side - Branding -->
+            <div class="login-branding">
+                <div class="login-branding-content">
+                    <div class="login-logo">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h2>ЭДО "Первый ключ"</h2>
+                    <p>Современная система<br>электронного документооборота</p>
+                    <div class="login-features">
+                        <div class="login-feature">
+                            <i class="fas fa-shield-alt"></i>
+                            <div class="login-feature-text">Безопасно</div>
+                        </div>
+                        <div class="login-feature">
+                            <i class="fas fa-bolt"></i>
+                            <div class="login-feature-text">Быстро</div>
+                        </div>
+                        <div class="login-feature">
+                            <i class="fas fa-check-circle"></i>
+                            <div class="login-feature-text">Надежно</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Side - Login Form -->
+            <div class="login-form-container">
+                <div class="login-header">
+                    <h1>Добро пожаловать!</h1>
+                    <p>Войдите в свой аккаунт</p>
+                </div>
+                
+                <form method="post" class="login-form">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="form-error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <div>{{ form.non_field_errors }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="form-group">
+                        <label for="{{ form.username.id_for_label }}">
+                            <i class="fas fa-user"></i>
+                            Имя пользователя
+                        </label>
+                        <input type="text" 
+                               name="username" 
+                               id="{{ form.username.id_for_label }}" 
+                               placeholder="Введите имя пользователя" 
+                               value="{{ form.username.value|default:'' }}"
+                               required 
+                               autofocus>
+                        {% if form.username.errors %}
+                        <div class="form-error">
+                            <i class="fas fa-exclamation-circle"></i>
+                            {{ form.username.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.password.id_for_label }}">
+                            <i class="fas fa-lock"></i>
+                            Пароль
+                        </label>
+                        <input type="password" 
+                               name="password" 
+                               id="{{ form.password.id_for_label }}" 
+                               placeholder="Введите пароль" 
+                               required>
+                        {% if form.password.errors %}
+                        <div class="form-error">
+                            <i class="fas fa-exclamation-circle"></i>
+                            {{ form.password.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="submit" class="login-submit">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Войти в систему
+                    </button>
+                </form>
+                
+                <div class="login-footer">
+                    <p>
+                        Нет учетной записи? 
+                        <a href="{% url 'accounts:register' %}">Зарегистрироваться</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="login-copyright">
+            <i class="fas fa-copyright"></i> 2026 ООО "Первый ключ". Все права защищены.
+        </div>
+    </div>
+    {% endblock %}
+</body>
+</html>

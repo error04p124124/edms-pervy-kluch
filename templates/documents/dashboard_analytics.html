@@ -1,0 +1,895 @@
+{% extends 'base_modern.html' %}
+{% load static %}
+
+{% block title %}Панель управления - ЭДО{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        margin-bottom: 2rem;
+    }
+    
+    .dashboard-title {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-subtitle {
+        color: #6b7280;
+        font-size: 1.1rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.75rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2.25rem 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s;
+        border-left: 5px solid transparent;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.12);
+    }
+    
+    .stat-card.blue {
+        border-left-color: #3b82f6;
+    }
+    
+    .stat-card.green {
+        border-left-color: #10b981;
+    }
+    
+    .stat-card.yellow {
+        border-left-color: #f59e0b;
+    }
+    
+    .stat-card.red {
+        border-left-color: #ef4444;
+    }
+    
+    .stat-card.purple {
+        border-left-color: #8b5cf6;
+    }
+    
+    .stat-card.indigo {
+        border-left-color: #6366f1;
+    }
+    
+    .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.9rem;
+    }
+    
+    .stat-icon.blue {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+    }
+    
+    .stat-icon.green {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #065f46;
+    }
+    
+    .stat-icon.yellow {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #92400e;
+    }
+    
+    .stat-icon.red {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+    }
+    
+    .stat-icon.purple {
+        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+        color: #5b21b6;
+    }
+    
+    .stat-icon.indigo {
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        color: #3730a3;
+    }
+    
+    .stat-value {
+        font-size: 3.2rem;
+        font-weight: 800;
+        color: #111827;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+    
+    .stat-change {
+        font-size: 0.85rem;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .stat-change.positive {
+        color: #059669;
+    }
+    
+    .stat-change.negative {
+        color: #dc2626;
+    }
+    
+    .charts-section {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .chart-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .chart-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+    
+    .bar-chart {
+        display: flex;
+        align-items: stretch;
+        justify-content: space-between;
+        height: 100%;
+        gap: 0.5rem;
+    }
+    
+    .bar-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.25rem;
+        padding-top: 2rem; /* room for bar-value above tallest bar */
+    }
+    
+    .bar {
+        width: 100%;
+        background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+        border-radius: 8px 8px 0 0;
+        transition: all 0.3s;
+        position: relative;
+        flex-shrink: 0;
+        min-height: 4px;
+    }
+    
+    .bar:hover {
+        background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+        filter: brightness(1.1);
+    }
+    
+    .bar-value {
+        position: absolute;
+        top: -22px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #374151;
+        white-space: nowrap;
+    }
+    
+    .bar-label {
+        font-size: 0.72rem;
+        color: #6b7280;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    
+    .donut-chart {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+    
+    .donut-legend {
+        margin-top: 1.5rem;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        background: #f9fafb;
+    }
+    
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        margin-right: 0.75rem;
+    }
+    
+    .legend-label {
+        flex: 1;
+        font-size: 0.9rem;
+        color: #374151;
+    }
+    
+    .legend-value {
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .tasks-section, .documents-section {
+        margin-bottom: 2rem;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .section-link {
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: color 0.2s;
+    }
+    
+    .section-link:hover {
+        color: #2563eb;
+    }
+    
+    .attention-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1rem;
+    }
+    
+    .attention-item {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #ef4444;
+        transition: all 0.2s;
+    }
+    
+    .attention-item:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .attention-item.approval {
+        border-left-color: #3b82f6;
+    }
+    
+    .attention-header {
+        display: flex;
+        align-items: start;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .attention-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .attention-icon.overdue {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .attention-icon.approval {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .attention-content {
+        flex: 1;
+    }
+    
+    .attention-title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.25rem;
+        font-size: 1rem;
+    }
+    
+    .attention-message {
+        color: #6b7280;
+        font-size: 0.85rem;
+    }
+    
+    .attention-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-small {
+        padding: 0.375rem 0.875rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary-small {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .btn-primary-small:hover {
+        background: #2563eb;
+        color: white;
+    }
+    
+    .btn-secondary-small {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    .btn-secondary-small:hover {
+        background: #e5e7eb;
+        color: #111827;
+    }
+    
+    .recent-documents-list {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .document-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 10px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .document-item:last-child {
+        border-bottom: none;
+    }
+    
+    .document-item:hover {
+        background: #f9fafb;
+    }
+    
+    .document-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .document-icon.draft {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+    
+    .document-icon.approved {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .document-icon.rejected {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .document-icon.in-approval {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .document-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .document-title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .document-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+    
+    .document-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    
+    .status-draft {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+    
+    .status-sent {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .status-coordination {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .status-approval {
+        background: #ede9fe;
+        color: #5b21b6;
+    }
+    
+    .status-approved {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-execution {
+        background: #e0e7ff;
+        color: #3730a3;
+    }
+    
+    .status-rejected {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .status-returned {
+        background: #fed7aa;
+        color: #92400e;
+    }
+    
+    .status-archived {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .quick-action-btn {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .quick-action-btn:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        transform: translateY(-2px);
+    }
+    
+    .quick-action-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .quick-action-text {
+        flex: 1;
+    }
+    
+    .quick-action-title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+    
+    .quick-action-desc {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+    
+    @media (max-width: 1200px) {
+        .charts-section {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 1024px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .attention-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">📊 Аналитическая панель</h1>
+        <p class="dashboard-subtitle">Добро пожаловать, {{ user.get_full_name|default:user.username }}!</p>
+    </div>
+    
+    <!-- Основная статистика -->
+    <div class="stats-grid">
+        <div class="stat-card blue">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-value">{{ total_documents }}</div>
+                    <div class="stat-label">Всего документов</div>
+                </div>
+                <div class="stat-icon blue">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+            </div>
+            <div class="stat-change">
+                <i class="fas fa-arrow-up"></i> {{ recent_activity }} за последние 30 дней
+            </div>
+        </div>
+        
+        <div class="stat-card yellow">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-value">{{ in_approval_count }}</div>
+                    <div class="stat-label">На согласовании</div>
+                </div>
+                <div class="stat-icon yellow">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+            <div class="stat-change">
+                Требуют внимания
+            </div>
+        </div>
+        
+        <div class="stat-card red">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-value">{{ overdue }}</div>
+                    <div class="stat-label">Просроченные</div>
+                </div>
+                <div class="stat-icon red">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+            <div class="stat-change negative">
+                <i class="fas fa-arrow-down"></i> Требуют срочных действий
+            </div>
+        </div>
+        
+        <div class="stat-card green">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-value">{{ approved }}</div>
+                    <div class="stat-label">Утверждено</div>
+                </div>
+                <div class="stat-icon green">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up"></i> Успешно завершены
+            </div>
+        </div>
+        
+        <div class="stat-card purple">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-value">{{ pending_tasks }}</div>
+                    <div class="stat-label">Задач в очереди</div>
+                </div>
+                <div class="stat-icon purple">
+                    <i class="fas fa-tasks"></i>
+                </div>
+            </div>
+            <div class="stat-change">
+                {{ inprogress_tasks }} в работе
+            </div>
+        </div>
+        
+        <div class="stat-card indigo">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-value">{{ signed_documents }}</div>
+                    <div class="stat-label">Подписано ЭП</div>
+                </div>
+                <div class="stat-icon indigo">
+                    <i class="fas fa-signature"></i>
+                </div>
+            </div>
+            <div class="stat-change">
+                Электронная подпись
+            </div>
+        </div>
+    </div>
+    
+    <!-- Быстрые действия -->
+    {% if user.profile.role in 'admin,clerk' %}
+    <div class="quick-actions">
+        <a href="{% url 'documents:document_create' %}" class="quick-action-btn">
+            <div class="quick-action-icon">
+                <i class="fas fa-plus"></i>
+            </div>
+            <div class="quick-action-text">
+                <div class="quick-action-title">Создать документ</div>
+                <div class="quick-action-desc">Новый документ</div>
+            </div>
+        </a>
+        
+        <a href="{% url 'documents:template_list' %}" class="quick-action-btn">
+            <div class="quick-action-icon">
+                <i class="fas fa-file-code"></i>
+            </div>
+            <div class="quick-action-text">
+                <div class="quick-action-title">Шаблоны</div>
+                <div class="quick-action-desc">Управление шаблонами</div>
+            </div>
+        </a>
+        
+        <a href="{% url 'documents:document_list' %}" class="quick-action-btn">
+            <div class="quick-action-icon">
+                <i class="fas fa-list"></i>
+            </div>
+            <div class="quick-action-text">
+                <div class="quick-action-title">Все документы</div>
+                <div class="quick-action-desc">Просмотр и поиск</div>
+            </div>
+        </a>
+        
+        {% if user.profile.role == 'manager' or user.profile.role == 'admin' %}
+        <a href="{% url 'documents:reports' %}" class="quick-action-btn">
+            <div class="quick-action-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="quick-action-text">
+                <div class="quick-action-title">Отчеты</div>
+                <div class="quick-action-desc">Статистика и аналитика</div>
+            </div>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Графики -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3 class="chart-title">Документы за последние 7 дней</h3>
+            </div>
+            <div class="chart-container">
+                <div class="bar-chart">
+                    {% for item in chart_data %}
+                    <div class="bar-item">
+                        <div class="bar" style="height: {% if item.count > 0 %}{% widthratio item.count chart_max 90 %}%{% else %}3%{% endif %};">
+                            <span class="bar-value">{{ item.count }}</span>
+                        </div>
+                        <div class="bar-label">{{ item.date }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3 class="chart-title">Статусы документов</h3>
+            </div>
+            <div class="donut-legend">
+                <div class="legend-item">
+                    <div class="d-flex align-items-center">
+                        <div class="legend-color" style="background: #3b82f6;"></div>
+                        <span class="legend-label">Черновик</span>
+                    </div>
+                    <span class="legend-value">{{ drafts }}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="d-flex align-items-center">
+                        <div class="legend-color" style="background: #f59e0b;"></div>
+                        <span class="legend-label">На согласовании</span>
+                    </div>
+                    <span class="legend-value">{{ in_approval_count }}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="d-flex align-items-center">
+                        <div class="legend-color" style="background: #10b981;"></div>
+                        <span class="legend-label">Утверждено</span>
+                    </div>
+                    <span class="legend-value">{{ approved }}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="d-flex align-items-center">
+                        <div class="legend-color" style="background: #ef4444;"></div>
+                        <span class="legend-label">Отклонено</span>
+                    </div>
+                    <span class="legend-value">{{ rejected }}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="d-flex align-items-center">
+                        <div class="legend-color" style="background: #6b7280;"></div>
+                        <span class="legend-label">В архиве</span>
+                    </div>
+                    <span class="legend-value">{{ archived }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Требуют внимания -->
+    {% if attention_needed %}
+    <div class="tasks-section">
+        <div class="section-header">
+            <h2 class="section-title">⚠️ Требуют внимания</h2>
+        </div>
+        <div class="attention-grid">
+            {% for item in attention_needed %}
+            <div class="attention-item {{ item.type }}">
+                <div class="attention-header">
+                    <div class="attention-icon {{ item.type }}">
+                        {% if item.type == 'overdue' %}
+                            <i class="fas fa-exclamation-triangle"></i>
+                        {% else %}
+                            <i class="fas fa-clipboard-check"></i>
+                        {% endif %}
+                    </div>
+                    <div class="attention-content">
+                        <div class="attention-title">{{ item.document.title }}</div>
+                        <div class="attention-message">{{ item.message }}</div>
+                    </div>
+                </div>
+                <div class="attention-actions">
+                    <a href="{% url 'documents:document_detail' item.document.pk %}" class="btn-small btn-primary-small">
+                        Открыть
+                    </a>
+                    {% if item.type == 'approval' %}
+                    <a href="{% url 'documents:document_detail' item.document.pk %}#approval" class="btn-small btn-secondary-small">
+                        Согласовать
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Последние документы -->
+    <div class="documents-section">
+        <div class="section-header">
+            <h2 class="section-title">📄 Последние документы</h2>
+            <a href="{% url 'documents:document_list' %}" class="section-link">
+                Посмотреть все <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <div class="recent-documents-list">
+            {% for doc in recent_documents %}
+            <a href="{% url 'documents:document_detail' doc.pk %}" class="document-item" style="text-decoration: none;">
+                <div class="document-icon {% if doc.status == 'draft' %}draft{% elif doc.status == 'approved' %}approved{% elif doc.status == 'rejected' %}rejected{% else %}in-approval{% endif %}">
+                    <i class="fas {% if doc.status == 'approved' %}fa-check{% elif doc.status == 'rejected' %}fa-times{% else %}fa-file{% endif %}"></i>
+                </div>
+                <div class="document-info">
+                    <div class="document-title">{{ doc.registry_number|default:"Б/Н" }} - {{ doc.title }}</div>
+                    <div class="document-meta">
+                        <span><i class="fas fa-user"></i> {{ doc.created_by.get_full_name }}</span>
+                        <span><i class="fas fa-calendar"></i> {{ doc.created_at|date:"d.m.Y" }}</span>
+                        {% if doc.deadline %}
+                        <span><i class="fas fa-clock"></i> До {{ doc.deadline|date:"d.m.Y" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="document-status status-{{ doc.status }}">
+                    {{ doc.get_status_display }}
+                </span>
+            </a>
+            {% empty %}
+            <div style="text-align: center; padding: 3rem; color: #9ca3af;">
+                <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <p>Нет документов</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

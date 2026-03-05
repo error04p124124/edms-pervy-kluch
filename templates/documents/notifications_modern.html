@@ -1,0 +1,268 @@
+{% extends 'base_modern.html' %}
+{% load static %}
+
+{% block title %}Уведомления - ЭДО{% endblock %}
+
+{% block content %}
+<div class="modern-page-header">
+    <div>
+        <h1 class="modern-page-title">
+            <i class="fas fa-bell"></i>
+            Уведомления
+        </h1>
+        <p class="modern-page-subtitle">Все системные уведомления и оповещения</p>
+    </div>
+    {% if notifications %}
+    <div class="modern-page-actions">
+        <form method="post" action="{% url 'documents:mark_all_read_new' %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="modern-btn btn-secondary">
+                <i class="fas fa-check-double"></i>
+                Отметить все как прочитанные
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+{% if notifications %}
+<div class="modern-card">
+    <div class="modern-card-body" style="padding: 0;">
+        <div class="notifications-list">
+            {% for notification in notifications %}
+            <div class="notification-item notification-item-card {% if not notification.is_read %}notification-unread unread{% endif %}" data-notification-id="{{ notification.id }}">
+                <div class="notification-indicator">
+                    {% if not notification.is_read %}
+                    <div class="notification-dot"></div>
+                    {% endif %}
+                </div>
+                <div class="notification-icon">
+                    {% if 'создан' in notification.message or 'Новый' in notification.message %}
+                        <div class="notification-icon-circle" style="background: var(--primary-100); color: var(--primary-600);">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                    {% elif 'одобрен' in notification.message or 'утвержден' in notification.message %}
+                        <div class="notification-icon-circle" style="background: var(--success-100); color: var(--success-600);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    {% elif 'отклонен' in notification.message %}
+                        <div class="notification-icon-circle" style="background: var(--error-100); color: var(--error-600);">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                    {% elif 'назначен' in notification.message %}
+                        <div class="notification-icon-circle" style="background: var(--warning-100); color: var(--warning-600);">
+                            <i class="fas fa-user-tag"></i>
+                        </div>
+                    {% elif 'комментарий' in notification.message %}
+                        <div class="notification-icon-circle" style="background: var(--info-100); color: var(--info-600);">
+                            <i class="fas fa-comment"></i>
+                        </div>
+                    {% else %}
+                        <div class="notification-icon-circle" style="background: var(--gray-100); color: var(--gray-600);">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="notification-content">
+                    <a href="{% if notification.document %}{% url 'documents:document_detail' notification.document.id %}{% else %}#{% endif %}" 
+                       class="notification-link">
+                        <div class="notification-message">{{ notification.message }}</div>
+                        <div class="notification-time">
+                            <i class="fas fa-clock"></i>
+                            {{ notification.created_at|date:"d.m.Y H:i" }}
+                        </div>
+                    </a>
+                </div>
+                {% if not notification.is_read %}
+                <div class="notification-actions">
+                    <button onclick="markAsRead(event, '{% url 'documents:mark_notification_read' notification.id %}')" 
+                            class="notification-mark-read" 
+                            title="Отметить как прочитанное">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="modern-card">
+    <div class="modern-card-body">
+        <div class="modern-empty-state">
+            <div class="modern-empty-icon">
+                <i class="fas fa-bell-slash"></i>
+            </div>
+            <h3 class="modern-empty-title">Нет уведомлений</h3>
+            <p class="modern-empty-text">Все уведомления и оповещения появятся здесь</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+/* Notifications List Styles */
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.notification-item {
+    display: flex;
+    align-items: start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-item:hover {
+    background: var(--gray-50);
+}
+
+.notification-unread {
+    background: var(--primary-50);
+}
+
+.notification-unread:hover {
+    background: var(--primary-100);
+}
+
+.notification-indicator {
+    width: 8px;
+    display: flex;
+    align-items: center;
+    padding-top: 4px;
+}
+
+.notification-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary-500);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+.notification-icon {
+    flex-shrink: 0;
+}
+
+.notification-icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.notification-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.notification-link:hover .notification-message {
+    color: var(--primary-600);
+}
+
+.notification-message {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+    transition: color 0.2s ease;
+}
+
+.notification-time {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.notification-actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.notification-mark-read {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    border: none;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.notification-mark-read:hover {
+    background: var(--primary-500);
+    color: white;
+    transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .notification-item {
+        gap: var(--space-2);
+        padding: var(--space-3);
+    }
+    
+    .notification-icon-circle {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+    
+    .notification-message {
+        font-size: 13px;
+    }
+}
+</style>
+
+<script>
+function markAsRead(event, url) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    fetch(url)
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error marking notification as read:', error);
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,202 @@
+{% load static permission_tags %}
+<!DOCTYPE html>
+<html lang="ru" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Система электронного документооборота ООО Первый ключ">
+    <title>{% block title %}ЭДО - Первый ключ{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column h-100" {% if user.is_authenticated %}data-authenticated="true"{% endif %}>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" style="position: relative; z-index: 1000;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'documents:dashboard' %}">
+                <i class="fas fa-file-alt"></i> ООО "Первый ключ" - ЭДО
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'documents:dashboard' %}">
+                                <i class="fas fa-tachometer-alt"></i> Главная
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'documents:document_list' %}">
+                                <i class="fas fa-folder-open"></i> Документы
+                            </a>
+                        </li>
+                        {% user_can_manage_templates user as can_manage %}
+                        {% if can_manage %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'documents:template_list' %}">
+                                <i class="fas fa-file-code"></i> Шаблоны
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'documents:reports' %}">
+                                <i class="fas fa-chart-bar"></i> Отчеты
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown" style="position: relative; z-index: 1050;">
+                            <a class="nav-link dropdown-toggle position-relative" href="#" id="notificationsDropdown" 
+                               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                {% if unread_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ unread_count }}
+                                </span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px; position: absolute; z-index: 1051;">
+                                {% if unread_notifications %}
+                                    {% for notification in unread_notifications|slice:":5" %}
+                                    <li>
+                                        <a class="dropdown-item small" href="{% url 'documents:mark_notification_read' notification.id %}">
+                                            {{ notification.message }}
+                                            <br><small class="text-muted">{{ notification.created_at|date:"d.m.Y H:i" }}</small>
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                    <li><hr class="dropdown-divider"></li>
+                                {% else %}
+                                    <li><span class="dropdown-item-text">Нет новых уведомлений</span></li>
+                                {% endif %}
+                                <li>
+                                    <a class="dropdown-item text-center" href="{% url 'documents:notifications' %}">
+                                        Все уведомления
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown" style="position: relative; z-index: 1050;">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                {% if user.profile.avatar %}
+                                <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover; border: 2px solid rgba(255,255,255,0.3);">
+                                {% else %}
+                                <div class="rounded-circle bg-white d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-user" style="color: #667eea; font-size: 0.9rem;"></i>
+                                </div>
+                                {% endif %}
+                                <span>{{ user.get_full_name|default:user.username }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 1051;">
+                                <li>
+                                    <span class="dropdown-item-text">
+                                        <strong>Роль:</strong> {{ user.profile.get_role_display }}
+                                    </span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                                    <i class="fas fa-user-edit"></i> Профиль
+                                </a></li>
+                                {% if user.is_staff %}
+                                <li><a class="dropdown-item" href="/admin/" target="_blank">
+                                    <i class="fas fa-cog"></i> Админ-панель
+                                </a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                                    <i class="fas fa-sign-out-alt"></i> Выход
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:login' %}">
+                                <i class="fas fa-sign-in-alt"></i> Вход
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container-fluid mt-3">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show d-flex align-items-center" role="alert">
+                    <div class="me-3">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle fa-lg"></i>
+                        {% elif message.tags == 'danger' %}
+                            <i class="fas fa-exclamation-circle fa-lg"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fas fa-exclamation-triangle fa-lg"></i>
+                        {% else %}
+                            <i class="fas fa-info-circle fa-lg"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">{{ message }}</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="container-fluid my-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 -4px 20px rgba(102, 126, 234, 0.2);">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                    <h6 class="mb-2"><i class="fas fa-file-alt me-2"></i>ООО "Первый ключ"</h6>
+                    <p class="mb-0 small" style="opacity: 0.9;">Система электронного документооборота</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="mb-1 small" style="opacity: 0.9;">
+                        <i class="fas fa-copyright me-1"></i> 2026 Все права защищены
+                    </p>
+                    <p class="mb-0 small" style="opacity: 0.8;">
+                        <i class="fas fa-code me-1"></i> Django {{ django_version }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {% if user.is_authenticated %}
+    <!-- Chat Widget -->
+    <script src="{% static 'js/chat.js' %}"></script>
+    {% endif %}
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

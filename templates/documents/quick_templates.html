@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Быстрые шаблоны{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-bolt me-2"></i> Быстрые шаблоны</h2>
+            <p class="text-muted">Создавайте документы быстро с помощью готовых шаблонов</p>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for template in templates %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="template-icon me-3">
+                            <i class="fas fa-file-alt fa-2x text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">{{ template.name }}</h5>
+                            <span class="badge bg-primary">{{ template.get_document_type_display }}</span>
+                        </div>
+                    </div>
+                    
+                    <p class="card-text text-muted small">
+                        {{ template.description|truncatewords:20 }}
+                    </p>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-chart-line me-1"></i>
+                            Использован: {{ template.usage_count }} раз
+                        </small>
+                        <a href="{% url 'documents:create_from_quick_template' template.id %}" class="btn btn-sm btn-gradient">
+                            <i class="fas fa-plus me-1"></i> Использовать
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Нет доступных шаблонов. Обратитесь к администратору для создания шаблонов.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.template-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+</style>
+{% endblock %}

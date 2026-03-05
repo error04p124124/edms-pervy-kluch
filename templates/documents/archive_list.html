@@ -1,0 +1,472 @@
+{% extends 'base_modern.html' %}
+{% load static permission_tags %}
+
+{% block title %}Архив документов - ЭДО{% endblock %}
+
+{% block extra_css %}
+<style>
+    .archive-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .archive-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .archive-stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+        border-left: 4px solid #6b7280;
+    }
+    
+    .archive-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .archive-stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+    
+    .archive-stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    .archive-filters {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6b7280;
+    }
+    
+    .filter-input {
+        padding: 0.625rem 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+    
+    .filter-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .documents-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .archive-document-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+        border-left: 4px solid #6b7280;
+        opacity: 0.9;
+    }
+    
+    .archive-document-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+        opacity: 1;
+    }
+    
+    .archive-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        background: #f3f4f6;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+    
+    .document-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.5rem 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .document-number {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+    
+    .document-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+    
+    .document-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .document-meta-item i {
+        color: #9ca3af;
+        width: 16px;
+    }
+    
+    .document-actions {
+        display: flex;
+        gap: 0.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .action-btn {
+        flex: 1;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+    
+    .action-btn-view {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    .action-btn-view:hover {
+        background: #e5e7eb;
+    }
+    
+    .action-btn-restore {
+        background: #10b981;
+        color: white;
+    }
+    
+    .action-btn-restore:hover {
+        background: #059669;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.5rem;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+    }
+    
+    .pagination-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: white;
+        color: #374151;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+    
+    .pagination-btn:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+    }
+    
+    .pagination-btn.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+    
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .archive-info-banner {
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .archive-info-icon {
+        width: 50px;
+        height: 50px;
+        background: white;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #6b7280;
+        flex-shrink: 0;
+    }
+    
+    .archive-info-text h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.25rem 0;
+    }
+    
+    .archive-info-text p {
+        color: #6b7280;
+        margin: 0;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="modern-animate-in">
+    <!-- Header -->
+    <div class="archive-header">
+        <div>
+            <h1 class="modern-page-title">Архив документов</h1>
+            <p class="modern-page-subtitle">Архивные документы организации</p>
+        </div>
+    </div>
+    
+    <!-- Info Banner -->
+    <div class="archive-info-banner">
+        <div class="archive-info-icon">
+            <i class="fas fa-archive"></i>
+        </div>
+        <div class="archive-info-text">
+            <h3>О архиве документов</h3>
+            <p>Здесь хранятся завершенные и архивированные документы. Вы можете просматривать их содержимое и при необходимости восстанавливать.</p>
+        </div>
+    </div>
+    
+    <!-- Stats -->
+    {% if documents %}
+    <div class="archive-stats">
+        <div class="archive-stat-card">
+            <div class="archive-stat-number">{{ documents|length }}</div>
+            <div class="archive-stat-label">Документов в архиве</div>
+        </div>
+        <div class="archive-stat-card" style="border-left-color: #3b82f6;">
+            <div class="archive-stat-number">{{ documents_this_year|default:0 }}</div>
+            <div class="archive-stat-label">Архивировано в этом году</div>
+        </div>
+        <div class="archive-stat-card" style="border-left-color: #10b981;">
+            <div class="archive-stat-number">{{ documents_this_month|default:0 }}</div>
+            <div class="archive-stat-label">Архивировано в этом месяце</div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Filters -->
+    <div class="archive-filters">
+        <form method="get">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Поиск</label>
+                    <input type="text" name="search" class="filter-input" 
+                           placeholder="Название или номер документа" 
+                           value="{{ request.GET.search }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Дата архивации</label>
+                    <input type="date" name="archived_after" class="filter-input" 
+                           value="{{ request.GET.archived_after }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Тип документа</label>
+                    <select name="template_type" class="filter-input">
+                        <option value="">Все типы</option>
+                        <option value="order" {% if request.GET.template_type == 'order' %}selected{% endif %}>Приказ</option>
+                        <option value="contract" {% if request.GET.template_type == 'contract' %}selected{% endif %}>Договор</option>
+                        <option value="act" {% if request.GET.template_type == 'act' %}selected{% endif %}>Акт</option>
+                        <option value="memo" {% if request.GET.template_type == 'memo' %}selected{% endif %}>Служебная записка</option>
+                        <option value="letter" {% if request.GET.template_type == 'letter' %}selected{% endif %}>Письмо</option>
+                        <option value="report" {% if request.GET.template_type == 'report' %}selected{% endif %}>Отчёт</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group" style="display: flex; flex-direction: row; align-items: flex-end; gap: 0.5rem;">
+                    <button type="submit" class="action-btn action-btn-view" style="flex: 1;">
+                        <i class="fas fa-search"></i> Применить
+                    </button>
+                    {% if request.GET.search or request.GET.archived_after or request.GET.template_type %}
+                    <a href="{% url 'documents:archive_list' %}" class="action-btn action-btn-view">
+                        <i class="fas fa-times"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Documents Grid -->
+    {% if documents %}
+    <div class="documents-grid">
+        {% for document in documents %}
+        <div class="archive-document-card">
+            <div class="archive-badge">
+                <i class="fas fa-archive"></i>
+                Архивный документ
+            </div>
+            
+            <h3 class="document-title">{{ document.title }}</h3>
+            
+            <div class="document-number">
+                <i class="fas fa-hashtag"></i> {{ document.document_number }}
+            </div>
+            
+            <div class="document-meta">
+                <div class="document-meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>Создан: {{ document.created_at|date:"d.m.Y" }}</span>
+                </div>
+                
+                <div class="document-meta-item">
+                    <i class="fas fa-archive"></i>
+                    <span>В архиве: {{ document.updated_at|date:"d.m.Y" }}</span>
+                </div>
+                
+                {% if document.template %}
+                <div class="document-meta-item">
+                    <i class="fas fa-file-alt"></i>
+                    <span>{{ document.template.get_type_display }}</span>
+                </div>
+                {% endif %}
+                
+                {% if document.created_by %}
+                <div class="document-meta-item">
+                    <i class="fas fa-user"></i>
+                    <span>{{ document.created_by.get_full_name|default:document.created_by.username }}</span>
+                </div>
+                {% endif %}
+                
+                {% if document.is_signed %}
+                <div class="document-meta-item" style="color: #10b981; font-weight: 600;">
+                    <i class="fas fa-certificate"></i>
+                    <span>Подписан ЭП</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="document-actions">
+                <a href="{% url 'documents:document_detail' document.id %}" class="action-btn action-btn-view">
+                    <i class="fas fa-eye"></i>
+                    Просмотр
+                </a>
+                
+                {% user_can_restore_document user document as can_restore %}
+                {% if can_restore %}
+                <form method="post" action="{% url 'documents:restore_document' document.id %}" style="flex: 1;">
+                    {% csrf_token %}
+                    <button type="submit" class="action-btn action-btn-restore" style="width: 100%;"
+                            onclick="return confirm('Восстановить документ из архива?')">
+                        <i class="fas fa-undo"></i>
+                        Восстановить
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-archive"></i>
+        <h3>Архив пуст</h3>
+        <p>
+            {% if request.GET.search or request.GET.archived_after or request.GET.template_type %}
+                Документы с выбранными фильтрами не найдены
+            {% else %}
+                В архиве пока нет документов
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Auto-hide flash messages after 5 seconds
+setTimeout(() => {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        alert.style.transition = 'opacity 0.5s';
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 500);
+    });
+}, 5000);
+</script>
+{% endblock %}
