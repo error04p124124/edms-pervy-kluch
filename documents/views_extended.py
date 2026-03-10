@@ -614,6 +614,7 @@ def document_signatures(request, document_id):
 def sign_document_view(request, document_id):
     """Подписать документ электронной подписью"""
     from .utils import sign_document
+    from .office_utils import append_ep_stamp_to_docx, append_ep_stamp_to_pdf
     document = get_object_or_404(Document, pk=document_id)
 
     if document.status != 'approved':
@@ -626,6 +627,19 @@ def sign_document_view(request, document_id):
         return redirect('documents:document_signatures', document_id=document_id)
 
     sign_document(document, request.user, request)
+
+    # Добавляем блок ЭП в сгенерированный файл документа
+    if document.generated_file:
+        try:
+            file_path = document.generated_file.path
+            all_signatures = ElectronicSignature.objects.filter(document=document).select_related('signer').order_by('signed_at')
+            if file_path.endswith('.docx'):
+                append_ep_stamp_to_docx(file_path, all_signatures)
+            elif file_path.endswith('.pdf'):
+                append_ep_stamp_to_pdf(file_path, all_signatures)
+        except Exception:
+            pass  # подпись в БД уже сохранена — файловая ошибка не критична
+
     messages.success(request, 'Документ успешно подписан электронной подписью!')
     return redirect('documents:document_signatures', document_id=document_id)
 

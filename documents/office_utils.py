@@ -246,3 +246,264 @@ def check_office_libraries():
         'xlsx': OPENPYXL_AVAILABLE,
         'all_available': DOCX_AVAILABLE and OPENPYXL_AVAILABLE
     }
+
+
+def _build_sig_rows(signatures):
+    """Возвращает список dict с данными подписантов (парсит certificate_info JSON)."""
+    import json
+    rows = []
+    for sig in signatures:
+        try:
+            cert = json.loads(sig.certificate_info) if sig.certificate_info else {}
+        except (ValueError, TypeError):
+            cert = {}
+        subj = cert.get('subject', {})
+        rows.append({
+            'full_name':    subj.get('cn') or sig.signer.get_full_name() or sig.signer.username,
+            'position':     subj.get('position', ''),
+            'organization': subj.get('organization', 'ООО «Первый ключ»'),
+            'inn':          subj.get('inn', ''),
+            'snils':        subj.get('snils', ''),
+            'algorithm':    cert.get('algorithm', 'ГОСТ Р 34.10-2012'),
+            'serial':       cert.get('serial_number', ''),
+            'issuer':       cert.get('issuer', {}).get('cn', ''),
+            'valid_from':   cert.get('valid_from', ''),
+            'valid_to':     cert.get('valid_to', ''),
+            'thumbprint':   cert.get('thumbprint', ''),
+            'hash':         sig.signature_data or '',
+            'signed_at':    sig.signed_at.strftime('%d.%m.%Y в %H:%M:%S') if sig.signed_at else '',
+            'ip':           sig.ip_address or '',
+            'is_valid':     sig.is_valid,
+        })
+    return rows
+
+
+def append_ep_stamp_to_docx(docx_path, signatures):
+    """
+    Добавляет блок ЭП в конец существующего .docx файла.
+
+    Args:
+        docx_path: абсолютный путь к .docx файлу (будет перезаписан)
+        signatures: QuerySet или список ElectronicSignature
+    """
+    if not DOCX_AVAILABLE:
+        return False, 'python-docx не установлен'
+    if not os.path.exists(docx_path):
+        return False, 'Файл документа не найден'
+
+    try:
+        from docx.shared import Pt, RGBColor, Cm
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+
+        doc = DocxDocument(docx_path)
+        rows = _build_sig_rows(signatures)
+        if not rows:
+            return True, None
+
+        # --- разделитель ---
+        hr = doc.add_paragraph()
+        hr.paragraph_format.space_before = Pt(12)
+        run = hr.add_run('─' * 72)
+        run.font.size = Pt(8)
+        run.font.color.rgb = RGBColor(0x10, 0xb9, 0x81)
+
+        # --- заголовок блока ---
+        title_p = doc.add_paragraph()
+        title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_run = title_p.add_run('КВАЛИФИЦИРОВАННАЯ ЭЛЕКТРОННАЯ ПОДПИСЬ')
+        title_run.bold = True
+        title_run.font.size = Pt(10)
+        title_run.font.color.rgb = RGBColor(0x06, 0x4e, 0x3b)
+
+        for r in rows:
+            status_label = '✔ Действительна' if r['is_valid'] else '✗ Недействительна'
+            status_color = RGBColor(0x06, 0x4e, 0x3b) if r['is_valid'] else RGBColor(0x99, 0x1b, 0x1b)
+
+            # таблица 2×N
+            tbl = doc.add_table(rows=0, cols=2)
+            tbl.style = 'Table Grid'
+            tbl.alignment = WD_TABLE_ALIGNMENT.LEFT
+
+            def _row(label, value, bold_val=False):
+                tr = tbl.add_row()
+                lc, vc = tr.cells[0], tr.cells[1]
+                lc.width = Cm(5)
+                lr = lc.paragraphs[0].add_run(label)
+                lr.font.size = Pt(8)
+                lr.font.color.rgb = RGBColor(0x6b, 0x72, 0x80)
+                vr = vc.paragraphs[0].add_run(str(value))
+                vr.font.size = Pt(8.5)
+                if bold_val:
+                    vr.bold = True
+
+            _row('Подписант', r['full_name'], bold_val=True)
+            _row('Статус подписи', status_label)
+            if r['position']:
+                _row('Должность', r['position'])
+            if r['organization']:
+                _row('Организация', r['organization'])
+            if r['inn']:
+                _row('ИНН', r['inn'])
+            if r['snils']:
+                _row('СНИЛС', r['snils'])
+            _row('Дата подписания', r['signed_at'])
+            if r['ip']:
+                _row('IP адрес', r['ip'])
+            _row('Алгоритм', r['algorithm'])
+            if r['issuer']:
+                _row('Издатель (УЦ)', r['issuer'])
+            if r['serial']:
+                _row('Серийный номер', r['serial'])
+            if r['valid_from'] and r['valid_to']:
+                _row('Срок действия', f"{r['valid_from']} — {r['valid_to']}")
+            if r['thumbprint']:
+                _row('Отпечаток SHA-1', r['thumbprint'])
+            _row('Хеш документа (SHA-256)', r['hash'])
+
+            doc.add_paragraph()  # отступ между подписантами
+
+        doc.save(docx_path)
+        return True, None
+
+    except Exception as e:
+        return False, str(e)
+
+
+def append_ep_stamp_to_pdf(pdf_path, signatures):
+    """
+    Добавляет страницу ЭП в конец существующего PDF.
+
+    Args:
+        pdf_path: абсолютный путь к .pdf файлу (будет перезаписан)
+        signatures: QuerySet или список ElectronicSignature
+    """
+    if not os.path.exists(pdf_path):
+        return False, 'Файл документа не найден'
+    rows = _build_sig_rows(signatures)
+    if not rows:
+        return True, None
+
+    try:
+        from reportlab.pdfgen.canvas import Canvas
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from pypdf import PdfReader, PdfWriter
+
+        W, H = A4
+        buf = BytesIO()
+        c = Canvas(buf, pagesize=A4)
+
+        GREEN  = (0.024, 0.306, 0.243)
+        GREY   = (0.42,  0.44,  0.50)
+        BLACK  = (0.07,  0.08,  0.09)
+        RED    = (0.60,  0.11,  0.11)
+        LGREEN = (0.94,  0.99,  0.97)
+
+        for idx, r in enumerate(rows):
+            if idx > 0:
+                c.showPage()
+
+            # фон
+            c.setFillColorRGB(*LGREEN)
+            c.rect(1.5*cm, 2*cm, W - 3*cm, H - 4*cm, fill=1, stroke=0)
+
+            # рамка
+            c.setStrokeColorRGB(*GREEN)
+            c.setLineWidth(1.5)
+            c.rect(1.5*cm, 2*cm, W - 3*cm, H - 4*cm, fill=0, stroke=1)
+
+            # заголовок
+            c.setFillColorRGB(*GREEN)
+            c.setFont('Helvetica-Bold', 11)
+            c.drawCentredString(W / 2, H - 3*cm, 'КВАЛИФИЦИРОВАННАЯ ЭЛЕКТРОННАЯ ПОДПИСЬ')
+
+            # статус
+            is_valid = r['is_valid']
+            c.setFont('Helvetica-Bold', 9)
+            c.setFillColorRGB(*(GREEN if is_valid else RED))
+            status = '✔  Подпись действительна' if is_valid else '✗  Подпись недействительна'
+            c.drawCentredString(W / 2, H - 3.8*cm, status)
+
+            # SVG-like cursive line (ломаная)
+            c.setStrokeColorRGB(*GREEN)
+            c.setLineWidth(1.8)
+            pts = [
+                (3.5*cm, H-5.2*cm), (5*cm, H-4.4*cm), (6*cm, H-5.5*cm),
+                (7.2*cm, H-4.6*cm), (8.5*cm, H-5.3*cm), (10*cm, H-4.5*cm),
+                (11.5*cm, H-5.4*cm), (13*cm, H-4.7*cm), (14.5*cm, H-5.2*cm),
+                (16*cm, H-4.9*cm), (17.5*cm, H-5.3*cm),
+            ]
+            p = c.beginPath()
+            p.moveTo(*pts[0])
+            for px, py in pts[1:]:
+                p.lineTo(px, py)
+            c.drawPath(p, stroke=1, fill=0)
+            # подчёркивание
+            c.setLineWidth(0.5)
+            c.setStrokeColorRGB(0.3, 0.7, 0.5)
+            c.line(3.5*cm, H-5.5*cm, 17.5*cm, H-5.5*cm)
+
+            # таблица полей
+            data = [
+                ('Подписант', r['full_name']),
+            ]
+            if r['position']:       data.append(('Должность', r['position']))
+            if r['organization']:   data.append(('Организация', r['organization']))
+            if r['inn']:            data.append(('ИНН', r['inn']))
+            if r['snils']:          data.append(('СНИЛС', r['snils']))
+            data.append(('Дата подписания', r['signed_at']))
+            if r['ip']:             data.append(('IP адрес', r['ip']))
+            data.append(('Алгоритм подписи', r['algorithm']))
+            if r['issuer']:         data.append(('Издатель (УЦ)', r['issuer']))
+            if r['serial']:         data.append(('Серийный номер', r['serial']))
+            if r['valid_from'] and r['valid_to']:
+                data.append(('Срок действия', f"{r['valid_from']} — {r['valid_to']}"))
+            if r['thumbprint']:     data.append(('Отпечаток SHA-1', r['thumbprint']))
+            data.append(('Хеш документа (SHA-256)', r['hash']))
+
+            y = H - 6.3*cm
+            lx, vx = 2.2*cm, 7.5*cm
+            row_h = 0.65*cm
+
+            for label, value in data:
+                c.setFont('Helvetica', 7.5)
+                c.setFillColorRGB(*GREY)
+                c.drawString(lx, y, label + ':')
+                c.setFont('Helvetica-Bold' if label == 'Подписант' else 'Helvetica', 8)
+                c.setFillColorRGB(*BLACK)
+                # длинные строки: укорачиваем
+                max_w = W - vx - 1.5*cm
+                while c.stringWidth(value, 'Helvetica-Bold' if label == 'Подписант' else 'Helvetica', 8) > max_w and len(value) > 10:
+                    value = value[:-4] + '...'
+                c.drawString(vx, y, value)
+                y -= row_h
+                if y < 2.5*cm:
+                    break
+
+            c.showPage()
+
+        c.save()
+        buf.seek(0)
+        sig_pdf = PdfReader(buf)
+
+        reader = PdfReader(pdf_path)
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+        for page in sig_pdf.pages:
+            writer.add_page(page)
+
+        tmp_path = pdf_path + '.tmp'
+        with open(tmp_path, 'wb') as f:
+            writer.write(f)
+        os.replace(tmp_path, pdf_path)
+        return True, None
+
+    except Exception as e:
+        return False, str(e)
+

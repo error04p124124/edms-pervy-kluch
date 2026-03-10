@@ -11,3 +11,4 @@ openpyxl
 python-docx
 psycopg2-binary
 dj-database-url
+pypdf
