@@ -1,5 +1,6 @@
 {% extends 'base_modern.html' %}
 {% load static %}
+{% load permission_tags %}
 
 {% block title %}Электронные подписи - {{ document.title }} - ЭДО{% endblock %}
 
@@ -302,6 +303,172 @@
         color: #1e40af;
         margin: 0.25rem 0;
     }
+
+    /* ===== ЭП STAMP ===== */
+    .ep-stamp {
+        border: 2px solid #10b981;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 1.25rem;
+        font-family: 'Courier New', monospace;
+    }
+    .ep-stamp.invalid {
+        border-color: #ef4444;
+    }
+    .ep-stamp-header {
+        background: linear-gradient(90deg, #064e3b 0%, #065f46 100%);
+        color: #ffffff;
+        padding: 0.6rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+    .ep-stamp.invalid .ep-stamp-header {
+        background: linear-gradient(90deg, #7f1d1d 0%, #991b1b 100%);
+    }
+    .ep-stamp-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.95;
+    }
+    .ep-stamp-valid-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 20px;
+        padding: 0.2rem 0.65rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .ep-stamp-body {
+        background: #f0fdf4;
+        padding: 1rem 1.25rem;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 1rem;
+        align-items: start;
+    }
+    .ep-stamp.invalid .ep-stamp-body {
+        background: #fff5f5;
+    }
+    .ep-signature-drawing {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        padding-right: 1rem;
+        border-right: 1px dashed #6ee7b7;
+        min-width: 150px;
+    }
+    .ep-stamp.invalid .ep-signature-drawing {
+        border-right-color: #fca5a5;
+    }
+    .ep-signature-drawing svg {
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+    }
+    .ep-sig-label {
+        font-size: 0.6rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    .ep-signer-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    .ep-signer-name {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #064e3b;
+        font-family: Georgia, serif;
+        letter-spacing: 0.02em;
+    }
+    .ep-stamp.invalid .ep-signer-name {
+        color: #7f1d1d;
+    }
+    .ep-signer-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+    }
+    .ep-signer-key {
+        color: #9ca3af;
+        white-space: nowrap;
+        min-width: 90px;
+    }
+    .ep-signer-val {
+        color: #1f2937;
+        font-weight: 500;
+        word-break: break-all;
+    }
+    .ep-cert-section {
+        background: #ecfdf5;
+        border-top: 1px solid #a7f3d0;
+        padding: 0.75rem 1.25rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem 2rem;
+    }
+    .ep-stamp.invalid .ep-cert-section {
+        background: #fef2f2;
+        border-top-color: #fecaca;
+    }
+    .ep-cert-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+    .ep-cert-key {
+        font-size: 0.62rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    .ep-cert-val {
+        font-size: 0.72rem;
+        color: #1f2937;
+        font-weight: 600;
+        word-break: break-all;
+    }
+    .ep-hash-section {
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        padding: 0.6rem 1.25rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem 2rem;
+    }
+    .ep-hash-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+    .ep-hash-key {
+        font-size: 0.62rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    .ep-hash-val {
+        font-size: 0.65rem;
+        color: #374151;
+        font-family: 'Courier New', monospace;
+        word-break: break-all;
+        line-height: 1.4;
+    }
+    @media (max-width: 600px) {
+        .ep-stamp-body { grid-template-columns: 1fr; }
+        .ep-signature-drawing { border-right: none; border-bottom: 1px dashed #6ee7b7; padding-right: 0; padding-bottom: 0.75rem; }
+        .ep-cert-section, .ep-hash-section { grid-template-columns: 1fr; }
+    }
 </style>
 {% endblock %}
 
@@ -373,6 +540,7 @@
     
     <div class="signatures-list">
         {% for signature in signatures %}
+        {% with cert=signature.certificate_info|parse_json %}
         <div class="signature-card {% if signature.is_valid %}valid{% else %}invalid{% endif %}">
             <div class="signature-header">
                 <div class="signature-signer">
@@ -392,36 +560,132 @@
                     {% endif %}
                 </span>
             </div>
-            
-            <div class="signature-details">
-                <div class="signature-detail">
-                    <span class="signature-detail-label">Дата и время</span>
-                    <span class="signature-detail-value">{{ signature.signed_at|date:"d.m.Y в H:i:s" }}</span>
+
+            <!-- ЭП STAMP -->
+            <div class="ep-stamp {% if not signature.is_valid %}invalid{% endif %}">
+
+                <!-- header -->
+                <div class="ep-stamp-header">
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <polyline points="9 12 11 14 15 10"/>
+                        </svg>
+                        <span class="ep-stamp-title">{{ cert.cert_type|default:"Квалифицированная электронная подпись" }}</span>
+                    </div>
+                    <span class="ep-stamp-valid-badge">
+                        {% if signature.is_valid %}
+                            <i class="fas fa-check-circle"></i> Действительна
+                        {% else %}
+                            <i class="fas fa-times-circle"></i> Недействительна
+                        {% endif %}
+                    </span>
                 </div>
-                
-                <div class="signature-detail">
-                    <span class="signature-detail-label">IP адрес</span>
-                    <span class="signature-detail-value">{{ signature.ip_address|default:"Не указан" }}</span>
+
+                <!-- body: cursive signature + signer info -->
+                <div class="ep-stamp-body">
+                    <div class="ep-signature-drawing">
+                        <svg width="160" height="56" viewBox="0 0 160 56" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4,42 C12,14 22,52 38,30 C50,13 56,48 72,34 C86,22 90,46 108,34
+                                     C122,24 128,48 144,34 C152,26 155,38 158,34"
+                                  fill="none" stroke="#065f46" stroke-width="2.2"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3,48 C35,44 70,50 110,46 C130,44 148,47 158,44"
+                                  fill="none" stroke="#065f46" stroke-width="0.9"
+                                  stroke-linecap="round" opacity="0.45"/>
+                        </svg>
+                        <span class="ep-sig-label">Электронная подпись</span>
+                    </div>
+
+                    <div class="ep-signer-block">
+                        <div class="ep-signer-name">{{ cert.subject.cn|default:signature.signer.get_full_name }}</div>
+                        {% if cert.subject.position %}
+                        <div class="ep-signer-row">
+                            <span class="ep-signer-key">Должность:</span>
+                            <span class="ep-signer-val">{{ cert.subject.position }}</span>
+                        </div>
+                        {% endif %}
+                        {% if cert.subject.organization %}
+                        <div class="ep-signer-row">
+                            <span class="ep-signer-key">Организация:</span>
+                            <span class="ep-signer-val">{{ cert.subject.organization }}</span>
+                        </div>
+                        {% endif %}
+                        {% if cert.subject.department %}
+                        <div class="ep-signer-row">
+                            <span class="ep-signer-key">Подразделение:</span>
+                            <span class="ep-signer-val">{{ cert.subject.department }}</span>
+                        </div>
+                        {% endif %}
+                        {% if cert.subject.inn %}
+                        <div class="ep-signer-row">
+                            <span class="ep-signer-key">ИНН:</span>
+                            <span class="ep-signer-val">{{ cert.subject.inn }}</span>
+                        </div>
+                        {% endif %}
+                        {% if cert.subject.snils %}
+                        <div class="ep-signer-row">
+                            <span class="ep-signer-key">СНИЛС:</span>
+                            <span class="ep-signer-val">{{ cert.subject.snils }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="ep-signer-row" style="margin-top:0.3rem;">
+                            <span class="ep-signer-key">Подписан:</span>
+                            <span class="ep-signer-val">{{ signature.signed_at|date:"d.m.Y в H:i:s" }}</span>
+                        </div>
+                        {% if signature.ip_address %}
+                        <div class="ep-signer-row">
+                            <span class="ep-signer-key">IP адрес:</span>
+                            <span class="ep-signer-val">{{ signature.ip_address }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
-                
-                <div class="signature-detail">
-                    <span class="signature-detail-label">Версия документа</span>
-                    <span class="signature-detail-value">{{ document.version }}</span>
+
+                <!-- certificate details -->
+                <div class="ep-cert-section">
+                    <div class="ep-cert-row">
+                        <span class="ep-cert-key">Серийный номер</span>
+                        <span class="ep-cert-val" style="font-size:0.65rem;">{{ cert.serial_number|default:"—" }}</span>
+                    </div>
+                    <div class="ep-cert-row">
+                        <span class="ep-cert-key">Издатель (УЦ)</span>
+                        <span class="ep-cert-val">{{ cert.issuer.cn|default:"—" }}</span>
+                    </div>
+                    <div class="ep-cert-row">
+                        <span class="ep-cert-key">Алгоритм подписи</span>
+                        <span class="ep-cert-val">{{ cert.algorithm|default:"—" }}</span>
+                    </div>
+                    <div class="ep-cert-row">
+                        <span class="ep-cert-key">Срок действия</span>
+                        <span class="ep-cert-val">{{ cert.valid_from|default:"—" }} — {{ cert.valid_to|default:"—" }}</span>
+                    </div>
+                    <div class="ep-cert-row">
+                        <span class="ep-cert-key">Назначение ключа</span>
+                        <span class="ep-cert-val">{{ cert.key_usage|default:"—" }}</span>
+                    </div>
+                    <div class="ep-cert-row">
+                        <span class="ep-cert-key">ОГРН издателя</span>
+                        <span class="ep-cert-val">{{ cert.issuer.ogrn|default:"—" }}</span>
+                    </div>
+                </div>
+
+                <!-- fingerprint + hash -->
+                <div class="ep-hash-section">
+                    <div class="ep-hash-row">
+                        <span class="ep-hash-key">Отпечаток сертификата (SHA-1)</span>
+                        <span class="ep-hash-val">{{ cert.thumbprint|default:"—" }}</span>
+                    </div>
+                    <div class="ep-hash-row">
+                        <span class="ep-hash-key">Хеш документа (SHA-256)</span>
+                        <span class="ep-hash-val">{{ signature.signature_data }}</span>
+                    </div>
                 </div>
             </div>
-            
-            {% if signature.certificate_info %}
-            <div class="certificate-info">
-                <h4><i class="fas fa-certificate"></i> Сертификат</h4>
-                <p>{{ signature.certificate_info }}</p>
-            </div>
-            {% endif %}
-            
-            <div class="signature-hash">
-                <div class="signature-hash-label">Данные подписи (SHA256)</div>
-                {{ signature.signature_data }}
-            </div>
+            <!-- /ЭП STAMP -->
+
         </div>
+        {% endwith %}
         {% endfor %}
     </div>
     {% else %}

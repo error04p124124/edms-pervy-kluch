@@ -7,6 +7,7 @@ from documents.permissions import (
     can_view_all_documents,
     can_create_document,
 )
+import json as _json
 
 register = template.Library()
 
@@ -45,3 +46,12 @@ def user_can_view_all_documents(user):
 def user_can_create_document(user):
     """Check if user can create documents"""
     return can_create_document(user)
+
+
+@register.filter(name='parse_json')
+def parse_json(value):
+    """Parse a JSON string into a Python dict for use in templates."""
+    try:
+        return _json.loads(value)
+    except (ValueError, TypeError):
+        return {}
