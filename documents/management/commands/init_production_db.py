@@ -370,9 +370,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self._ensure_users()
+        # Всегда восстанавливаем файлы шаблонов (нужно при каждом редеплое на Railway,
+        # т.к. эфемерное хранилище сбрасывается, но PostgreSQL-записи остаются)
+        self._seed_templates()
         if Document.objects.count() == 0:
             self.stdout.write('  БД пуста — загружаю тестовые данные...')
-            self._seed_templates()
             self._seed_documents()
             self.stdout.write(self.style.SUCCESS('✅ Тестовые данные загружены'))
         else:
@@ -417,6 +419,7 @@ class Command(BaseCommand):
                 profile.save()
 
     def _seed_templates(self):
+        import os
         for name, type_, fmt, desc in TEMPLATES_DATA:
             tpl, created = DocumentTemplate.objects.get_or_create(name=name)
             tpl.type = type_
@@ -426,10 +429,20 @@ class Command(BaseCommand):
             phs = TEMPLATE_PLACEHOLDERS.get(name, [])
             tpl.placeholders = phs
             tpl.html_template = f'<h1>{name}</h1><p>{{{{ФИО}}}}, {{{{отдел}}}}</p>'
-            file_content, filename = _generate_template_file(name, fmt, phs)
-            tpl.template_file.save(filename, file_content, save=False)
+
+            # Файл генерируем только если он отсутствует на диске
+            file_missing = (
+                not tpl.template_file or
+                not tpl.template_file.name or
+                not os.path.exists(tpl.template_file.path)
+            )
+            if file_missing:
+                file_content, filename = _generate_template_file(name, fmt, phs)
+                tpl.template_file.save(filename, file_content, save=False)
+                self.stdout.write(f'  📄 Файл пересоздан: {name} ({fmt})')
             tpl.save()
-            self.stdout.write(f'  📄 Шаблон: {name} ({fmt}, {len(phs)} плейсхолд.)')
+            if created:
+                self.stdout.write(f'  📄 Новый шаблон: {name} ({fmt}, {len(phs)} плейсхолд.)')
 
     def _seed_documents(self):
         all_users = list(User.objects.all())
