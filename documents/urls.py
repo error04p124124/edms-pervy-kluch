@@ -59,7 +59,7 @@ urlpatterns = [
     
     # Уведомления (расширенные)
     path('notifications/', views_extended.notifications_list, name='notifications_list'),
-    path('notifications/<int:notification_id>/read/', views_extended.mark_notification_read, name='mark_notification_read_new'),
+    path('notifications/<int:notification_id>/read/', views_extended.mark_notification_read, name='mark_notification_read'),
     path('notifications/read-all/', views_extended.mark_all_notifications_read, name='mark_all_read_new'),
     path('api/notifications/count/', views_extended.unread_notifications_count, name='notifications_count'),
     
