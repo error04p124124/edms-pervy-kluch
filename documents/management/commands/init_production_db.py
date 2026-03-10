@@ -1,10 +1,8 @@
 """
-Инициализация production БД: создаёт пользователей и тестовые данные при старте.
+Инициализация production БД: создаёт пользователей и шаблоны при старте.
 Идемпотентна — не создаёт дубли при повторных запусках.
 """
-import random
 from io import BytesIO
-from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
@@ -12,7 +10,7 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from accounts.models import UserProfile
-from documents.models import Document, DocumentTemplate
+from documents.models import DocumentTemplate
 
 
 # ─── Обязательные пользователи ────────────────────────────────────────────────
@@ -366,19 +364,14 @@ def _generate_template_file(name, fmt, placeholders=None):
 # ─── Management command ───────────────────────────────────────────────────────
 
 class Command(BaseCommand):
-    help = 'Инициализация production БД: пользователи + тестовые данные'
+    help = 'Инициализация production БД: пользователи и шаблоны'
 
     def handle(self, *args, **options):
         self._ensure_users()
         # Всегда восстанавливаем файлы шаблонов (нужно при каждом редеплое на Railway,
         # т.к. эфемерное хранилище сбрасывается, но PostgreSQL-записи остаются)
         self._seed_templates()
-        if Document.objects.count() == 0:
-            self.stdout.write('  БД пуста — загружаю тестовые данные...')
-            self._seed_documents()
-            self.stdout.write(self.style.SUCCESS('✅ Тестовые данные загружены'))
-        else:
-            self.stdout.write('  Документы уже есть — пропускаю сидинг.')
+        self.stdout.write(self.style.SUCCESS('✅ Инициализация завершена'))
 
     def _ensure_users(self):
         for u in REQUIRED_USERS:
@@ -444,67 +437,3 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f'  📄 Новый шаблон: {name} ({fmt}, {len(phs)} плейсхолд.)')
 
-    def _seed_documents(self):
-        all_users = list(User.objects.all())
-        templates = list(DocumentTemplate.objects.all())
-
-        titles = [
-            'Приказ о приёме на работу {name}',
-            'Приказ об отпуске {name}',
-            'Приказ о премировании сотрудников {dept}',
-            'Приказ о командировке {name}',
-            'Договор № {num} с ООО «{company}»',
-            'Акт приёма-передачи № {num}',
-            'Служебная записка от {dept}',
-            'Докладная записка о закупке оборудования',
-            'Письмо в адрес ООО «{company}»',
-            'Финансовый отчёт за {period}',
-            'Квартальный отчёт {dept} за {period}',
-            'Заявление на отпуск {name}',
-            'Трудовой договор с {name}',
-            'Смета расходов {dept} на {period}',
-            'Акт выполненных работ по договору № {num}',
-        ]
-        companies = ['Альфа', 'Бета', 'Прогресс', 'Инновация', 'Развитие', 'Омега']
-        periods = ['январь 2026', 'февраль 2026', 'март 2026', 'I кв. 2026']
-        statuses = ['draft', 'sent_for_approval', 'coordination', 'approved',
-                    'execution', 'rejected', 'returned', 'archived']
-        weights = [0.10, 0.15, 0.15, 0.25, 0.15, 0.05, 0.05, 0.10]
-
-        for _ in range(60):
-            creator = random.choice(all_users)
-            tpl = random.choice(templates) if templates else None
-            dept = getattr(getattr(creator, 'profile', None), 'department', 'Отдел')
-
-            title_fmt = random.choice(titles)
-            title = title_fmt.format(
-                name=f'{creator.first_name} {creator.last_name}',
-                dept=dept,
-                num=f'{random.randint(100, 999)}/2026',
-                company=random.choice(companies),
-                period=random.choice(periods),
-            )
-
-            days_ago = random.randint(0, 180)
-            created_at = timezone.now() - timedelta(days=days_ago)
-            status = random.choices(statuses, weights=weights)[0]
-            assigned = random.choice(all_users) if status != 'draft' else None
-
-            doc = Document.objects.create(
-                title=title,
-                template=tpl,
-                status=status,
-                created_by=creator,
-                assigned_to=assigned,
-                content=(
-                    f'Содержание документа: {title}.\n\n'
-                    f'Составлен {created_at.strftime("%d.%m.%Y")}.'
-                ),
-                deadline=(
-                    (created_at + timedelta(days=random.randint(5, 30))).date()
-                    if random.random() > 0.4 else None
-                ),
-            )
-            Document.objects.filter(pk=doc.pk).update(created_at=created_at)
-
-        self.stdout.write('  📝 Создано 60 документов')
